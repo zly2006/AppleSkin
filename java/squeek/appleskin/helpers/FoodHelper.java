@@ -1,12 +1,12 @@
 package squeek.appleskin.helpers;
 
-import com.mojang.datafixers.util.Pair;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.FoodComponent;
 import net.minecraft.entity.effect.StatusEffectCategory;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.HungerManager;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.FoodComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
@@ -19,7 +19,7 @@ public class FoodHelper
 		if (itemStack.getItem() == null)
 			return false;
 
-		return itemStack.getItem().isFood();
+		return itemStack.getItem().getComponents().contains(DataComponentTypes.FOOD);
 	}
 
 	public static boolean canConsume(ItemStack itemStack, PlayerEntity player)
@@ -28,18 +28,18 @@ public class FoodHelper
 		if (!isFood(itemStack))
 			return false;
 
-		FoodComponent itemFood = itemStack.getItem().getFoodComponent();
+		FoodComponent itemFood = itemStack.getItem().getComponents().get(DataComponentTypes.FOOD);
 		if (itemFood == null)
 			return false;
 
-		return player.canConsume(itemFood.isAlwaysEdible());
+		return player.canConsume(itemFood.canAlwaysEat());
 	}
 
 	public static FoodValues getDefaultFoodValues(ItemStack itemStack)
 	{
-		FoodComponent itemFood = itemStack.getItem().getFoodComponent();
-		int hunger = itemFood != null ? itemFood.getHunger() : 0;
-		float saturationModifier = itemFood != null ? itemFood.getSaturationModifier() : 0;
+		FoodComponent itemFood = itemStack.getItem().getComponents().get(DataComponentTypes.FOOD);
+		int hunger = itemFood != null ? itemFood.nutrition() : 0;
+		float saturationModifier = itemFood != null ? itemFood.saturationModifier() : 0;
 		return new FoodValues(hunger, saturationModifier);
 	}
 
@@ -60,9 +60,9 @@ public class FoodHelper
 		if (!isFood(itemStack))
 			return false;
 
-		for (Pair<StatusEffectInstance, Float> effect : itemStack.getItem().getFoodComponent().getStatusEffects())
+		for (FoodComponent.StatusEffectEntry effect : itemStack.getItem().getComponents().get(DataComponentTypes.FOOD).effects())
 		{
-			if (effect.getFirst() != null && effect.getFirst().getEffectType() != null && effect.getFirst().getEffectType().getCategory() == StatusEffectCategory.HARMFUL)
+			if (effect.effect().getEffectType().value().getCategory() == StatusEffectCategory.HARMFUL)
 				return true;
 		}
 		return false;
@@ -91,9 +91,9 @@ public class FoodHelper
 		}
 
 		// health for regeneration effect
-		for (Pair<StatusEffectInstance, Float> effect : itemStack.getItem().getFoodComponent().getStatusEffects())
+		for (FoodComponent.StatusEffectEntry effect : itemStack.getItem().getComponents().get(DataComponentTypes.FOOD).effects())
 		{
-			StatusEffectInstance effectInstance = effect.getFirst();
+			StatusEffectInstance effectInstance = effect.effect();
 			if (effectInstance != null && effectInstance.getEffectType() == StatusEffects.REGENERATION)
 			{
 				int amplifier = effectInstance.getAmplifier();

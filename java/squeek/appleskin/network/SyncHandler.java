@@ -12,15 +12,6 @@ import java.util.UUID;
 
 public class SyncHandler
 {
-	public static final Identifier EXHAUSTION_SYNC = new Identifier("appleskin", "exhaustion_sync");
-	public static final Identifier SATURATION_SYNC = new Identifier("appleskin", "saturation_sync");
-
-	private static PacketByteBuf makePacketBuf(float val)
-	{
-		PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-		buf.writeFloat(val);
-		return buf;
-	}
 
 	/*
 	 * Sync saturation (vanilla MC only syncs when it hits 0)
@@ -37,14 +28,14 @@ public class SyncHandler
 		float saturation = player.getHungerManager().getSaturationLevel();
 		if (lastSaturationLevel == null || lastSaturationLevel != saturation)
 		{
-			ServerPlayNetworking.send(player, SATURATION_SYNC, makePacketBuf(saturation));
+			ServerPlayNetworking.send(player, new SaturationSyncPayload(saturation));
 			lastSaturationLevels.put(player.getUuid(), saturation);
 		}
 
 		float exhaustionLevel = player.getHungerManager().getExhaustion();
 		if (lastExhaustionLevel == null || Math.abs(lastExhaustionLevel - exhaustionLevel) >= 0.01f)
 		{
-			ServerPlayNetworking.send(player, EXHAUSTION_SYNC, makePacketBuf(exhaustionLevel));
+			ServerPlayNetworking.send(player, new ExhaustionSyncPayload(exhaustionLevel));
 			lastExhaustionLevels.put(player.getUuid(), exhaustionLevel);
 		}
 	}

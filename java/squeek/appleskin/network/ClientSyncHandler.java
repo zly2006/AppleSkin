@@ -3,22 +3,24 @@ package squeek.appleskin.network;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 
 public class ClientSyncHandler
 {
 	@Environment(EnvType.CLIENT)
 	public static void init()
 	{
-		ClientPlayNetworking.registerGlobalReceiver(SyncHandler.EXHAUSTION_SYNC, (client, handler, buf, responseSender) -> {
-			float exhaustion = buf.readFloat();
-			client.execute(() -> {
-				client.player.getHungerManager().setExhaustion(exhaustion);
+		PayloadTypeRegistry.playS2C().register(ExhaustionSyncPayload.ID, ExhaustionSyncPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(SaturationSyncPayload.ID, SaturationSyncPayload.CODEC);
+
+		ClientPlayNetworking.registerGlobalReceiver(ExhaustionSyncPayload.ID, (payload, context) -> {
+			context.client().execute(() -> {
+				context.client().player.getHungerManager().setExhaustion(payload.getExhaustion());
 			});
 		});
-		ClientPlayNetworking.registerGlobalReceiver(SyncHandler.SATURATION_SYNC, (client, handler, buf, responseSender) -> {
-			float saturation = buf.readFloat();
-			client.execute(() -> {
-				client.player.getHungerManager().setSaturationLevel(saturation);
+		ClientPlayNetworking.registerGlobalReceiver(SaturationSyncPayload.ID, (payload, context) -> {
+			context.client().execute(() -> {
+				context.client().player.getHungerManager().setSaturationLevel(payload.getSaturation());
 			});
 		});
 	}
