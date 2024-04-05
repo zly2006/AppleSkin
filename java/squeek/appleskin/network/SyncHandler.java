@@ -1,10 +1,8 @@
 package squeek.appleskin.network;
 
-import io.netty.buffer.Unpooled;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,6 +10,11 @@ import java.util.UUID;
 
 public class SyncHandler
 {
+	public static void init()
+	{
+		PayloadTypeRegistry.playS2C().register(ExhaustionSyncPayload.ID, ExhaustionSyncPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(SaturationSyncPayload.ID, SaturationSyncPayload.CODEC);
+	}
 
 	/*
 	 * Sync saturation (vanilla MC only syncs when it hits 0)

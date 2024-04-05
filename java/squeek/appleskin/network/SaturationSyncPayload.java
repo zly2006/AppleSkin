@@ -3,32 +3,31 @@ package squeek.appleskin.network;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.packet.CustomPayload;
+import net.minecraft.util.Identifier;
 
-public class SaturationSyncPayload implements CustomPayload {
-    public static final PacketCodec<PacketByteBuf, SaturationSyncPayload> CODEC = CustomPayload.codecOf(SaturationSyncPayload::write, SaturationSyncPayload::new);
-    public static final CustomPayload.Id<SaturationSyncPayload> ID = CustomPayload.id("appleskin:saturation_sync");
+public record SaturationSyncPayload(float saturation) implements CustomPayload
+{
+	public static final PacketCodec<PacketByteBuf, SaturationSyncPayload> CODEC = CustomPayload.codecOf(SaturationSyncPayload::write, SaturationSyncPayload::new);
+	public static final CustomPayload.Id<SaturationSyncPayload> ID = new Id<>(new Identifier("appleskin", "saturation"));
 
-    float saturation;
+	public SaturationSyncPayload(PacketByteBuf buf)
+	{
+		this(buf.readFloat());
+	}
 
-    public SaturationSyncPayload(float saturation) {
-        this.saturation = saturation;
-    }
+	public void write(PacketByteBuf buf)
+	{
+		buf.writeFloat(saturation);
+	}
 
-    public SaturationSyncPayload(PacketByteBuf buf) {
-        this.saturation = buf.readFloat();
-    }
+	public float getSaturation()
+	{
+		return saturation;
+	}
 
-    public void write(PacketByteBuf buf) {
-        buf.writeFloat(saturation);
-    }
-
-    public float getSaturation() {
-        return saturation;
-    }
-
-    @Override
-    public Id<? extends CustomPayload> getId() {
-        return ID;
-    }
-
+	@Override
+	public Id<? extends CustomPayload> getId()
+	{
+		return ID;
+	}
 }
