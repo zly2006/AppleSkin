@@ -22,6 +22,9 @@
     "client": [
       "squeek.appleskin.AppleSkin"
     ],
+    "main": [
+      "squeek.appleskin.AppleSkinCommon"
+    ],
     "modmenu": [
       "squeek.appleskin.gui.ModMenuIntegration"
     ],

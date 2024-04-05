@@ -1,10 +1,8 @@
 package squeek.appleskin.network;
 
-import io.netty.buffer.Unpooled;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,14 +10,10 @@ import java.util.UUID;
 
 public class SyncHandler
 {
-	public static final Identifier EXHAUSTION_SYNC = new Identifier("appleskin", "exhaustion_sync");
-	public static final Identifier SATURATION_SYNC = new Identifier("appleskin", "saturation_sync");
-
-	private static PacketByteBuf makePacketBuf(float val)
+	public static void init()
 	{
-		PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-		buf.writeFloat(val);
-		return buf;
+		PayloadTypeRegistry.playS2C().register(ExhaustionSyncPayload.ID, ExhaustionSyncPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(SaturationSyncPayload.ID, SaturationSyncPayload.CODEC);
 	}
 
 	/*
@@ -37,14 +31,14 @@ public class SyncHandler
 		float saturation = player.getHungerManager().getSaturationLevel();
 		if (lastSaturationLevel == null || lastSaturationLevel != saturation)
 		{
-			ServerPlayNetworking.send(player, SATURATION_SYNC, makePacketBuf(saturation));
+			ServerPlayNetworking.send(player, new SaturationSyncPayload(saturation));
 			lastSaturationLevels.put(player.getUuid(), saturation);
 		}
 
 		float exhaustionLevel = player.getHungerManager().getExhaustion();
 		if (lastExhaustionLevel == null || Math.abs(lastExhaustionLevel - exhaustionLevel) >= 0.01f)
 		{
-			ServerPlayNetworking.send(player, EXHAUSTION_SYNC, makePacketBuf(exhaustionLevel));
+			ServerPlayNetworking.send(player, new ExhaustionSyncPayload(exhaustionLevel));
 			lastExhaustionLevels.put(player.getUuid(), exhaustionLevel);
 		}
 	}
