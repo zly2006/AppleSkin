@@ -4,7 +4,6 @@ import net.fabricmc.fabric.api.event.Event;
 import net.minecraft.component.type.FoodComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import squeek.appleskin.api.food.FoodValues;
 import squeek.appleskin.api.handler.EventHandler;
 
 /**
