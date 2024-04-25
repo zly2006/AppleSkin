@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.component.type.FoodComponent;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.HungerManager;
 import net.minecraft.entity.player.PlayerEntity;
@@ -14,7 +15,6 @@ import org.lwjgl.opengl.GL11;
 import squeek.appleskin.ModConfig;
 import squeek.appleskin.api.event.FoodValuesEvent;
 import squeek.appleskin.api.event.HUDOverlayEvent;
-import squeek.appleskin.api.food.FoodValues;
 import squeek.appleskin.helpers.FoodHelper;
 import squeek.appleskin.helpers.TextureHelper;
 import squeek.appleskin.helpers.TextureHelper.HeartType;
@@ -112,33 +112,33 @@ public class HUDOverlayHandler
 
 		// try to get the item stack in the player hand
 		ItemStack heldItem = player.getMainHandStack();
-		if (ModConfig.INSTANCE.showFoodValuesHudOverlayWhenOffhand && !FoodHelper.canConsume(heldItem, player))
+		FoodHelper.QueriedFoodResult heldFood = FoodHelper.query(heldItem, player);
+		boolean canConsume = heldFood != null && FoodHelper.canConsume(player, heldFood.modifiedFoodComponent);
+		if (ModConfig.INSTANCE.showFoodValuesHudOverlayWhenOffhand && !canConsume)
+		{
 			heldItem = player.getOffHandStack();
+			heldFood = FoodHelper.query(heldItem, player);
+			canConsume = heldFood != null && FoodHelper.canConsume(player, heldFood.modifiedFoodComponent);
+		}
 
-		boolean shouldRenderHeldItemValues = !heldItem.isEmpty() && FoodHelper.canConsume(heldItem, player);
+		boolean shouldRenderHeldItemValues = !heldItem.isEmpty() && canConsume;
 		if (!shouldRenderHeldItemValues)
 		{
 			resetFlash();
 			return;
 		}
 
-		// restored hunger/saturation overlay while holding food
-		FoodValues modifiedFoodValues = FoodHelper.getModifiedFoodValues(heldItem, player);
-		FoodValuesEvent foodValuesEvent = new FoodValuesEvent(player, heldItem, FoodHelper.getDefaultFoodValues(heldItem), modifiedFoodValues);
-		FoodValuesEvent.EVENT.invoker().interact(foodValuesEvent);
-		modifiedFoodValues = foodValuesEvent.modifiedFoodValues;
-
 		// draw health overlay if needed
-		if (shouldShowEstimatedHealth(heldItem, modifiedFoodValues))
+		if (shouldShowEstimatedHealth(player))
 		{
-			float foodHealthIncrement = FoodHelper.getEstimatedHealthIncrement(heldItem, modifiedFoodValues, player);
+			float foodHealthIncrement = FoodHelper.getEstimatedHealthIncrement(player, heldFood.modifiedFoodComponent);
 			float currentHealth = player.getHealth();
 			float modifiedHealth = Math.min(currentHealth + foodHealthIncrement, player.getMaxHealth());
 
 			// only create object when the estimated health is successfully
 			HUDOverlayEvent.HealthRestored healthRenderEvent = null;
 			if (currentHealth < modifiedHealth)
-				healthRenderEvent = new HUDOverlayEvent.HealthRestored(modifiedHealth, heldItem, modifiedFoodValues, left, top, context);
+				healthRenderEvent = new HUDOverlayEvent.HealthRestored(modifiedHealth, heldItem, heldFood.modifiedFoodComponent, left, top, context);
 
 			// notify everyone that we should render estimated health hud
 			if (healthRenderEvent != null)
@@ -148,20 +148,21 @@ public class HUDOverlayHandler
 				drawHealthOverlay(healthRenderEvent, mc, flashAlpha);
 		}
 
+		// restored hunger/saturation overlay while holding food
 		if (ModConfig.INSTANCE.showFoodValuesHudOverlay)
 		{
 			// notify everyone that we should render hunger hud overlay
-			HUDOverlayEvent.HungerRestored hungerRenderEvent = new HUDOverlayEvent.HungerRestored(stats.getFoodLevel(), heldItem, modifiedFoodValues, right, top, context);
+			HUDOverlayEvent.HungerRestored hungerRenderEvent = new HUDOverlayEvent.HungerRestored(stats.getFoodLevel(), heldItem, heldFood.modifiedFoodComponent, right, top, context);
 			HUDOverlayEvent.HungerRestored.EVENT.invoker().interact(hungerRenderEvent);
 			if (hungerRenderEvent.isCanceled)
 				return;
 
 			// calculate the final hunger and saturation
-			int foodHunger = modifiedFoodValues.hunger;
-			float foodSaturationIncrement = modifiedFoodValues.getSaturationIncrement();
+			int foodHunger = heldFood.modifiedFoodComponent.nutrition();
+			float foodSaturationIncrement = heldFood.modifiedFoodComponent.saturation();
 
 			// draw hunger overlay
-			drawHungerOverlay(hungerRenderEvent, mc, foodHunger, flashAlpha, FoodHelper.isRotten(heldItem));
+			drawHungerOverlay(hungerRenderEvent, mc, foodHunger, flashAlpha, FoodHelper.isRotten(heldFood.modifiedFoodComponent));
 
 			int newFoodValue = stats.getFoodLevel() + foodHunger;
 			float newSaturationValue = stats.getSaturationLevel() + foodSaturationIncrement;
@@ -379,7 +380,7 @@ public class HUDOverlayHandler
 	}
 
 
-	private boolean shouldShowEstimatedHealth(ItemStack hoveredStack, FoodValues modifiedFoodValues)
+	private boolean shouldShowEstimatedHealth(PlayerEntity player)
 	{
 		// then configuration cancel the render event
 		if (!ModConfig.INSTANCE.showFoodHealthHudOverlay)
@@ -389,8 +390,6 @@ public class HUDOverlayHandler
 		if (healthBarOffsets.size() == 0)
 			return false;
 
-		MinecraftClient mc = MinecraftClient.getInstance();
-		PlayerEntity player = mc.player;
 		HungerManager stats = player.getHungerManager();
 
 		// in the `PEACEFUL` mode, health will restore faster

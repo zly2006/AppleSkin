@@ -10,57 +10,57 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
-import squeek.appleskin.api.food.FoodValues;
+import org.jetbrains.annotations.Nullable;
+import squeek.appleskin.api.event.FoodValuesEvent;
 
 public class FoodHelper
 {
 	public static boolean isFood(ItemStack itemStack)
 	{
-		if (itemStack.getItem() == null)
-			return false;
-
-		return itemStack.getItem().getComponents().contains(DataComponentTypes.FOOD);
+		return itemStack.contains(DataComponentTypes.FOOD);
 	}
 
-	public static boolean canConsume(ItemStack itemStack, PlayerEntity player)
+	public static boolean canConsume(PlayerEntity player, FoodComponent foodComponent)
 	{
-		// item is not a food that can be consume
-		if (!isFood(itemStack))
-			return false;
-
-		FoodComponent itemFood = itemStack.getItem().getComponents().get(DataComponentTypes.FOOD);
-		if (itemFood == null)
-			return false;
-
-		return player.canConsume(itemFood.canAlwaysEat());
+		return player.canConsume(foodComponent.canAlwaysEat());
 	}
 
-	public static FoodValues getDefaultFoodValues(ItemStack itemStack)
+	public static FoodComponent EMPTY_FOOD_COMPONENT = new FoodComponent.Builder().build();
+
+	/**
+	 * Assumes itemStack is known to be a food, always returns a non-null FoodComponent
+	 */
+	public static FoodComponent getDefaultFoodValues(ItemStack itemStack)
 	{
-		FoodComponent itemFood = itemStack.getItem().getComponents().get(DataComponentTypes.FOOD);
-		int hunger = itemFood != null ? itemFood.nutrition() : 0;
-		float saturationModifier = itemFood != null ? itemFood.saturationModifier() : 0;
-		return new FoodValues(hunger, saturationModifier);
+		return itemStack.getOrDefault(DataComponentTypes.FOOD, EMPTY_FOOD_COMPONENT);
 	}
 
-	public static FoodValues getModifiedFoodValues(ItemStack itemStack, PlayerEntity player)
-	{
-		if (itemStack.getItem() instanceof DynamicFood)
+	public static class QueriedFoodResult {
+		public FoodComponent defaultFoodComponent;
+		public FoodComponent modifiedFoodComponent;
+
+		public QueriedFoodResult(FoodComponent defaultFoodComponent, FoodComponent modifiedFoodComponent)
 		{
-			DynamicFood food = (DynamicFood) itemStack.getItem();
-			int hunger = food.getDynamicHunger(itemStack, player);
-			float saturationModifier = food.getDynamicSaturation(itemStack, player);
-			return new FoodValues(hunger, saturationModifier);
+			this.defaultFoodComponent = defaultFoodComponent;
+			this.modifiedFoodComponent = modifiedFoodComponent;
 		}
-		return getDefaultFoodValues(itemStack);
 	}
 
-	public static boolean isRotten(ItemStack itemStack)
-	{
-		if (!isFood(itemStack))
-			return false;
+	@Nullable
+	public static QueriedFoodResult query(ItemStack itemStack, PlayerEntity player) {
+		if (!isFood(itemStack)) return null;
 
-		for (FoodComponent.StatusEffectEntry effect : itemStack.getItem().getComponents().get(DataComponentTypes.FOOD).effects())
+		FoodComponent defaultFood = FoodHelper.getDefaultFoodValues(itemStack);
+
+		FoodValuesEvent foodValuesEvent = new FoodValuesEvent(player, itemStack, defaultFood, defaultFood);
+		FoodValuesEvent.EVENT.invoker().interact(foodValuesEvent);
+
+		return new QueriedFoodResult(foodValuesEvent.defaultFoodComponent, foodValuesEvent.modifiedFoodComponent);
+	}
+
+	public static boolean isRotten(FoodComponent foodComponent)
+	{
+		for (FoodComponent.StatusEffectEntry effect : foodComponent.effects())
 		{
 			if (effect.effect().getEffectType().value().getCategory() == StatusEffectCategory.HARMFUL)
 				return true;
@@ -68,33 +68,30 @@ public class FoodHelper
 		return false;
 	}
 
-	public static float getEstimatedHealthIncrement(ItemStack itemStack, FoodValues modifiedFoodValues, PlayerEntity player)
+	public static float getEstimatedHealthIncrement(PlayerEntity player, FoodComponent foodComponent)
 	{
-		if (!isFood(itemStack))
-			return 0;
-
 		if (!player.canFoodHeal())
 			return 0;
 
 		HungerManager stats = player.getHungerManager();
 		World world = player.getEntityWorld();
 
-		int foodLevel = Math.min(stats.getFoodLevel() + modifiedFoodValues.hunger, 20);
+		int foodLevel = Math.min(stats.getFoodLevel() + foodComponent.nutrition(), 20);
 		float healthIncrement = 0;
 
 		// health for natural regen
 		if (foodLevel >= 18.0F && world != null && world.getGameRules().getBoolean(GameRules.NATURAL_REGENERATION))
 		{
-			float saturationLevel = Math.min(stats.getSaturationLevel() + modifiedFoodValues.getSaturationIncrement(), (float) foodLevel);
+			float saturationLevel = Math.min(stats.getSaturationLevel() + foodComponent.saturation(), (float) foodLevel);
 			float exhaustionLevel = stats.getExhaustion();
 			healthIncrement = getEstimatedHealthIncrement(foodLevel, saturationLevel, exhaustionLevel);
 		}
 
 		// health for regeneration effect
-		for (FoodComponent.StatusEffectEntry effect : itemStack.getItem().getComponents().get(DataComponentTypes.FOOD).effects())
+		for (FoodComponent.StatusEffectEntry effect : foodComponent.effects())
 		{
 			StatusEffectInstance effectInstance = effect.effect();
-			if (effectInstance != null && effectInstance.getEffectType() == StatusEffects.REGENERATION)
+			if (effectInstance.getEffectType() == StatusEffects.REGENERATION)
 			{
 				int amplifier = effectInstance.getAmplifier();
 				int duration = effectInstance.getDuration();

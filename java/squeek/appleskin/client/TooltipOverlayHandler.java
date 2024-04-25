@@ -3,9 +3,10 @@ package squeek.appleskin.client;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.component.type.FoodComponent;
+import net.minecraft.item.Item;
 import net.minecraft.text.TextVisitFactory;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.item.TooltipContext;
 import net.minecraft.client.item.TooltipData;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerEntity;
@@ -15,7 +16,6 @@ import net.minecraft.util.Identifier;
 import squeek.appleskin.ModConfig;
 import squeek.appleskin.api.event.FoodValuesEvent;
 import squeek.appleskin.api.event.TooltipOverlayEvent;
-import squeek.appleskin.api.food.FoodValues;
 import squeek.appleskin.helpers.FoodHelper;
 import squeek.appleskin.helpers.KeyHelper;
 import squeek.appleskin.helpers.TextureHelper;
@@ -76,8 +76,8 @@ public class TooltipOverlayHandler
 
 	public static class FoodOverlay implements TooltipComponent, TooltipData
 	{
-		private FoodValues defaultFood;
-		private FoodValues modifiedFood;
+		private FoodComponent defaultFood;
+		private FoodComponent modifiedFood;
 
 		private int biggestHunger;
 		private float biggestSaturationIncrement;
@@ -90,14 +90,14 @@ public class TooltipOverlayHandler
 
 		private ItemStack itemStack;
 
-		FoodOverlay(ItemStack itemStack, FoodValues defaultFood, FoodValues modifiedFood, PlayerEntity player)
+		FoodOverlay(ItemStack itemStack, FoodComponent defaultFood, FoodComponent modifiedFood, PlayerEntity player)
 		{
 			this.itemStack = itemStack;
 			this.defaultFood = defaultFood;
 			this.modifiedFood = modifiedFood;
 
-			biggestHunger = Math.max(defaultFood.hunger, modifiedFood.hunger);
-			biggestSaturationIncrement = Math.max(defaultFood.getSaturationIncrement(), modifiedFood.getSaturationIncrement());
+			biggestHunger = Math.max(defaultFood.nutrition(), modifiedFood.nutrition());
+			biggestSaturationIncrement = Math.max(defaultFood.saturation(), modifiedFood.saturation());
 
 			hungerBars = (int) Math.ceil(Math.abs(biggestHunger) / 2f);
 			if (hungerBars > 10)
@@ -156,7 +156,7 @@ public class TooltipOverlayHandler
 		INSTANCE = new TooltipOverlayHandler();
 	}
 
-	public void onItemTooltip(ItemStack hoveredStack, PlayerEntity player, TooltipContext context, List tooltip)
+	public void onItemTooltip(ItemStack hoveredStack, PlayerEntity player, Item.TooltipContext context, List tooltip)
 	{
 		// When hoveredStack or tooltip is null an unknown exception occurs.
 		// If ModConfig.INSTANCE is null then we're probably still in the init phase
@@ -166,13 +166,12 @@ public class TooltipOverlayHandler
 		if (!shouldShowTooltip(hoveredStack))
 			return;
 
-		FoodValues defaultFood = FoodHelper.getDefaultFoodValues(hoveredStack);
-		FoodValues modifiedFood = FoodHelper.getModifiedFoodValues(hoveredStack, player);
+		FoodHelper.QueriedFoodResult queriedFoodResult = FoodHelper.query(hoveredStack, player);
+		if (queriedFoodResult == null)
+			return;
 
-		FoodValuesEvent foodValuesEvent = new FoodValuesEvent(player, hoveredStack, defaultFood, modifiedFood);
-		FoodValuesEvent.EVENT.invoker().interact(foodValuesEvent);
-		defaultFood = foodValuesEvent.defaultFoodValues;
-		modifiedFood = foodValuesEvent.modifiedFoodValues;
+		FoodComponent defaultFood = queriedFoodResult.defaultFoodComponent;
+		FoodComponent modifiedFood = queriedFoodResult.modifiedFoodComponent;
 
 		// Notify everyone that we should render tooltip overlay
 		TooltipOverlayEvent.Pre prerenderEvent = new TooltipOverlayEvent.Pre(hoveredStack, defaultFood, modifiedFood);
@@ -236,8 +235,8 @@ public class TooltipOverlayHandler
 		MatrixStack matrixStack;
 		ItemStack itemStack = foodOverlay.itemStack;
 
-		FoodValues defaultFood = foodOverlay.defaultFood;
-		FoodValues modifiedFood = foodOverlay.modifiedFood;
+		FoodComponent defaultFood = foodOverlay.defaultFood;
+		FoodComponent modifiedFood = foodOverlay.modifiedFood;
 
 		int x = toolTipX;
 		int y = toolTipY;
@@ -255,8 +254,8 @@ public class TooltipOverlayHandler
 		itemStack = renderEvent.itemStack;
 		matrixStack = context.getMatrices();
 
-		int defaultFoodHunger = defaultFood.hunger;
-		int modifiedFoodHunger = modifiedFood.hunger;
+		int defaultFoodHunger = defaultFood.nutrition();
+		int modifiedFoodHunger = modifiedFood.nutrition();
 
 		RenderSystem.enableDepthTest();
 		RenderSystem.enableBlend();
@@ -265,7 +264,7 @@ public class TooltipOverlayHandler
 		// Render from right to left so that the icons 'face' the right way
 		x += (foodOverlay.hungerBars - 1) * 9;
 
-		boolean isRotten = FoodHelper.isRotten(itemStack);
+		boolean isRotten = FoodHelper.isRotten(modifiedFood);
 
 		for (int i = 0; i < foodOverlay.hungerBars * 2; i += 2)
 		{
@@ -305,7 +304,7 @@ public class TooltipOverlayHandler
 		x = toolTipX;
 		y += 10;
 
-		float modifiedSaturationIncrement = modifiedFood.getSaturationIncrement();
+		float modifiedSaturationIncrement = modifiedFood.saturation();
 		float absModifiedSaturationIncrement = Math.abs(modifiedSaturationIncrement);
 
 		// Render from right to left so that the icons 'face' the right way

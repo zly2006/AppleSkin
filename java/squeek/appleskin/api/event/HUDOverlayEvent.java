@@ -2,8 +2,8 @@ package squeek.appleskin.api.event;
 
 import net.fabricmc.fabric.api.event.Event;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.component.type.FoodComponent;
 import net.minecraft.item.ItemStack;
-import squeek.appleskin.api.food.FoodValues;
 import squeek.appleskin.api.handler.EventHandler;
 
 public class HUDOverlayEvent
@@ -45,15 +45,15 @@ public class HUDOverlayEvent
 	 */
 	public static class HungerRestored extends HUDOverlayEvent
 	{
-		public HungerRestored(int foodLevel, ItemStack itemStack, FoodValues foodValues, int x, int y, DrawContext context)
+		public HungerRestored(int foodLevel, ItemStack itemStack, FoodComponent foodComponent, int x, int y, DrawContext context)
 		{
 			super(x, y, context);
 			this.currentFoodLevel = foodLevel;
 			this.itemStack = itemStack;
-			this.foodValues = foodValues;
+			this.foodComponent = foodComponent;
 		}
 
-		public final FoodValues foodValues;
+		public final FoodComponent foodComponent;
 		public final ItemStack itemStack;
 		public final int currentFoodLevel;
 
@@ -65,15 +65,15 @@ public class HUDOverlayEvent
 	 */
 	public static class HealthRestored extends HUDOverlayEvent
 	{
-		public HealthRestored(float modifiedHealth, ItemStack itemStack, FoodValues foodValues, int x, int y, DrawContext context)
+		public HealthRestored(float modifiedHealth, ItemStack itemStack, FoodComponent foodComponent, int x, int y, DrawContext context)
 		{
 			super(x, y, context);
 			this.modifiedHealth = modifiedHealth;
 			this.itemStack = itemStack;
-			this.foodValues = foodValues;
+			this.foodComponent = foodComponent;
 		}
 
-		public final FoodValues foodValues;
+		public final FoodComponent foodComponent;
 		public final ItemStack itemStack;
 		public final float modifiedHealth;
 

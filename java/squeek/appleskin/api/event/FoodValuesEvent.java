@@ -1,6 +1,7 @@
 package squeek.appleskin.api.event;
 
 import net.fabricmc.fabric.api.event.Event;
+import net.minecraft.component.type.FoodComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import squeek.appleskin.api.food.FoodValues;
@@ -12,16 +13,16 @@ import squeek.appleskin.api.handler.EventHandler;
  */
 public class FoodValuesEvent
 {
-	public FoodValuesEvent(PlayerEntity player, ItemStack itemStack, FoodValues defaultFoodValues, FoodValues modifiedFoodValues)
+	public FoodValuesEvent(PlayerEntity player, ItemStack itemStack, FoodComponent defaultFoodValues, FoodComponent modifiedFoodComponent)
 	{
 		this.player = player;
 		this.itemStack = itemStack;
-		this.defaultFoodValues = defaultFoodValues;
-		this.modifiedFoodValues = modifiedFoodValues;
+		this.defaultFoodComponent = defaultFoodValues;
+		this.modifiedFoodComponent = modifiedFoodComponent;
 	}
 
-	public FoodValues defaultFoodValues;
-	public FoodValues modifiedFoodValues;
+	public FoodComponent defaultFoodComponent;
+	public FoodComponent modifiedFoodComponent;
 	public final ItemStack itemStack;
 	public final PlayerEntity player;
 

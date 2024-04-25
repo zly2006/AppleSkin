@@ -2,8 +2,8 @@ package squeek.appleskin.api.event;
 
 import net.fabricmc.fabric.api.event.Event;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.component.type.FoodComponent;
 import net.minecraft.item.ItemStack;
-import squeek.appleskin.api.food.FoodValues;
 import squeek.appleskin.api.handler.EventHandler;
 
 public class TooltipOverlayEvent
@@ -13,7 +13,7 @@ public class TooltipOverlayEvent
 	 */
 	public static class Pre extends TooltipOverlayEvent
 	{
-		public Pre(ItemStack itemStack, FoodValues defaultFood, FoodValues modifiedFood)
+		public Pre(ItemStack itemStack, FoodComponent defaultFood, FoodComponent modifiedFood)
 		{
 			super(itemStack, defaultFood, modifiedFood);
 		}
@@ -27,7 +27,7 @@ public class TooltipOverlayEvent
 	 */
 	public static class Render extends TooltipOverlayEvent
 	{
-		public Render(ItemStack itemStack, int x, int y, DrawContext context, FoodValues defaultFood, FoodValues modifiedFood)
+		public Render(ItemStack itemStack, int x, int y, DrawContext context, FoodComponent defaultFood, FoodComponent modifiedFood)
 		{
 			super(itemStack, defaultFood, modifiedFood);
 			this.context = context;
@@ -42,15 +42,15 @@ public class TooltipOverlayEvent
 		public static Event<EventHandler<Render>> EVENT = EventHandler.createArrayBacked();
 	}
 
-	private TooltipOverlayEvent(ItemStack itemStack, FoodValues defaultFood, FoodValues modifiedFood)
+	private TooltipOverlayEvent(ItemStack itemStack, FoodComponent defaultFood, FoodComponent modifiedFood)
 	{
 		this.itemStack = itemStack;
 		this.defaultFood = defaultFood;
 		this.modifiedFood = modifiedFood;
 	}
 
-	public final FoodValues defaultFood;
-	public final FoodValues modifiedFood;
+	public final FoodComponent defaultFood;
+	public final FoodComponent modifiedFood;
 
 	public final ItemStack itemStack;
 
