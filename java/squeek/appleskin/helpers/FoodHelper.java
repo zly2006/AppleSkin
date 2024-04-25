@@ -16,10 +16,7 @@ public class FoodHelper
 {
 	public static boolean isFood(ItemStack itemStack)
 	{
-		if (itemStack.getItem() == null)
-			return false;
-
-		return itemStack.getItem().getComponents().contains(DataComponentTypes.FOOD);
+		return itemStack.contains(DataComponentTypes.FOOD);
 	}
 
 	public static boolean canConsume(ItemStack itemStack, PlayerEntity player)
@@ -28,7 +25,7 @@ public class FoodHelper
 		if (!isFood(itemStack))
 			return false;
 
-		FoodComponent itemFood = itemStack.getItem().getComponents().get(DataComponentTypes.FOOD);
+		FoodComponent itemFood = itemStack.get(DataComponentTypes.FOOD);
 		if (itemFood == null)
 			return false;
 
@@ -37,7 +34,7 @@ public class FoodHelper
 
 	public static FoodValues getDefaultFoodValues(ItemStack itemStack)
 	{
-		FoodComponent itemFood = itemStack.getItem().getComponents().get(DataComponentTypes.FOOD);
+		FoodComponent itemFood = itemStack.get(DataComponentTypes.FOOD);
 		int hunger = itemFood != null ? itemFood.nutrition() : 0;
 		float saturationModifier = itemFood != null ? itemFood.saturationModifier() : 0;
 		return new FoodValues(hunger, saturationModifier);
@@ -60,7 +57,7 @@ public class FoodHelper
 		if (!isFood(itemStack))
 			return false;
 
-		for (FoodComponent.StatusEffectEntry effect : itemStack.getItem().getComponents().get(DataComponentTypes.FOOD).effects())
+		for (FoodComponent.StatusEffectEntry effect : itemStack.get(DataComponentTypes.FOOD).effects())
 		{
 			if (effect.effect().getEffectType().value().getCategory() == StatusEffectCategory.HARMFUL)
 				return true;
@@ -91,7 +88,7 @@ public class FoodHelper
 		}
 
 		// health for regeneration effect
-		for (FoodComponent.StatusEffectEntry effect : itemStack.getItem().getComponents().get(DataComponentTypes.FOOD).effects())
+		for (FoodComponent.StatusEffectEntry effect : itemStack.get(DataComponentTypes.FOOD).effects())
 		{
 			StatusEffectInstance effectInstance = effect.effect();
 			if (effectInstance != null && effectInstance.getEffectType() == StatusEffects.REGENERATION)
