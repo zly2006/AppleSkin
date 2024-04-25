@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.component.type.FoodComponent;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.HungerManager;
 import net.minecraft.entity.player.PlayerEntity;
@@ -13,12 +12,11 @@ import net.minecraft.util.Identifier;
 import net.minecraft.world.Difficulty;
 import org.lwjgl.opengl.GL11;
 import squeek.appleskin.ModConfig;
-import squeek.appleskin.api.event.FoodValuesEvent;
 import squeek.appleskin.api.event.HUDOverlayEvent;
 import squeek.appleskin.helpers.FoodHelper;
 import squeek.appleskin.helpers.TextureHelper;
-import squeek.appleskin.helpers.TextureHelper.HeartType;
 import squeek.appleskin.helpers.TextureHelper.FoodType;
+import squeek.appleskin.helpers.TextureHelper.HeartType;
 import squeek.appleskin.util.IntPoint;
 
 import java.util.Random;
@@ -31,10 +29,7 @@ public class HUDOverlayHandler
 	private float unclampedFlashAlpha = 0f;
 	private float flashAlpha = 0f;
 	private byte alphaDir = 1;
-	private int foodIconsOffset;
 	private boolean needDisableBlend = false;
-
-	public int FOOD_BAR_HEIGHT = 39;
 
 	public final Vector<IntPoint> healthBarOffsets = new Vector<>();
 	public final Vector<IntPoint> foodBarOffsets = new Vector<>();
@@ -46,10 +41,8 @@ public class HUDOverlayHandler
 		INSTANCE = new HUDOverlayHandler();
 	}
 
-	public void onPreRender(DrawContext context)
+	public void onPreRender(DrawContext context, PlayerEntity player, int top, int right)
 	{
-		foodIconsOffset = FOOD_BAR_HEIGHT;
-
 		// If ModConfig.INSTANCE is null then we're probably still in the init phase
 		if (ModConfig.INSTANCE == null)
 			return;
@@ -57,12 +50,8 @@ public class HUDOverlayHandler
 		if (!ModConfig.INSTANCE.showFoodExhaustionHudUnderlay)
 			return;
 
-		MinecraftClient mc = MinecraftClient.getInstance();
-		PlayerEntity player = mc.player;
 		assert player != null;
 
-		int right = mc.getWindow().getScaledWidth() / 2 + 91;
-		int top = mc.getWindow().getScaledHeight() - foodIconsOffset;
 		float exhaustion = player.getHungerManager().getExhaustion();
 
 		// Notify everyone that we should render exhaustion hud overlay
@@ -70,11 +59,11 @@ public class HUDOverlayHandler
 		HUDOverlayEvent.Exhaustion.EVENT.invoker().interact(renderEvent);
 		if (!renderEvent.isCanceled)
 		{
-			drawExhaustionOverlay(renderEvent, mc, 1f);
+			drawExhaustionOverlay(renderEvent, 1f);
 		}
 	}
 
-	public void onRender(DrawContext context)
+	public void onRender(DrawContext context, PlayerEntity player, int top, int right)
 	{
 		// If ModConfig.INSTANCE is null then we're probably still in the init phase
 		if (ModConfig.INSTANCE == null)
@@ -84,13 +73,10 @@ public class HUDOverlayHandler
 			return;
 
 		MinecraftClient mc = MinecraftClient.getInstance();
-		PlayerEntity player = mc.player;
 		assert player != null;
 		HungerManager stats = player.getHungerManager();
 
-		int top = mc.getWindow().getScaledHeight() - foodIconsOffset;
-		int left = mc.getWindow().getScaledWidth() / 2 - 91; // left of health bar
-		int right = mc.getWindow().getScaledWidth() / 2 + 91; // right of food bar
+		int left = right - 81;
 
 		// generate at the beginning to avoid ArrayIndexOutOfBoundsException
 		generateBarOffsets(top, left, right, mc.inGameHud.getTicks(), player);
@@ -304,7 +290,7 @@ public class HUDOverlayHandler
 		disableAlpha(alpha);
 	}
 
-	public void drawExhaustionOverlay(DrawContext context, float exhaustion, MinecraftClient mc, int right, int top, float alpha)
+	public void drawExhaustionOverlay(DrawContext context, float exhaustion, int right, int top, float alpha)
 	{
 		float maxExhaustion = FoodHelper.MAX_EXHAUSTION;
 		// clamp between 0 and 1
@@ -333,9 +319,9 @@ public class HUDOverlayHandler
 		drawHealthOverlay(event.context, mc.player.getHealth(), event.modifiedHealth, mc, event.x, event.y, alpha);
 	}
 
-	private void drawExhaustionOverlay(HUDOverlayEvent.Exhaustion event, MinecraftClient mc, float alpha)
+	private void drawExhaustionOverlay(HUDOverlayEvent.Exhaustion event, float alpha)
 	{
-		drawExhaustionOverlay(event.context, event.exhaustion, mc, event.x, event.y, alpha);
+		drawExhaustionOverlay(event.context, event.exhaustion, event.x, event.y, alpha);
 	}
 
 	private boolean shouldRenderAnyOverlays()
