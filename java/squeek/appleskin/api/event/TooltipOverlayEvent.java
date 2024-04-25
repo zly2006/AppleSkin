@@ -1,10 +1,10 @@
 package squeek.appleskin.api.event;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
-import squeek.appleskin.api.food.FoodValues;
 
 public class TooltipOverlayEvent extends Event implements ICancellableEvent
 {
@@ -13,7 +13,7 @@ public class TooltipOverlayEvent extends Event implements ICancellableEvent
 	 */
 	public static class Pre extends TooltipOverlayEvent
 	{
-		public Pre(ItemStack itemStack, FoodValues defaultFood, FoodValues modifiedFood)
+		public Pre(ItemStack itemStack, FoodProperties defaultFood, FoodProperties modifiedFood)
 		{
 			super(itemStack, defaultFood, modifiedFood);
 		}
@@ -25,7 +25,7 @@ public class TooltipOverlayEvent extends Event implements ICancellableEvent
 	 */
 	public static class Render extends TooltipOverlayEvent
 	{
-		public Render(ItemStack itemStack, int x, int y, GuiGraphics guiGraphics, FoodValues defaultFood, FoodValues modifiedFood)
+		public Render(ItemStack itemStack, int x, int y, GuiGraphics guiGraphics, FoodProperties defaultFood, FoodProperties modifiedFood)
 		{
 			super(itemStack, defaultFood, modifiedFood);
 			this.guiGraphics = guiGraphics;
@@ -38,15 +38,15 @@ public class TooltipOverlayEvent extends Event implements ICancellableEvent
 		public GuiGraphics guiGraphics;
 	}
 
-	private TooltipOverlayEvent(ItemStack itemStack, FoodValues defaultFood, FoodValues modifiedFood)
+	private TooltipOverlayEvent(ItemStack itemStack, FoodProperties defaultFood, FoodProperties modifiedFood)
 	{
 		this.itemStack = itemStack;
 		this.defaultFood = defaultFood;
 		this.modifiedFood = modifiedFood;
 	}
 
-	public final FoodValues defaultFood;
-	public final FoodValues modifiedFood;
+	public final FoodProperties defaultFood;
+	public final FoodProperties modifiedFood;
 
 	public final ItemStack itemStack;
 }

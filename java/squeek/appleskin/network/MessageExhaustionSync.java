@@ -1,36 +1,32 @@
 package squeek.appleskin.network;
 
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.network.handling.PlayPayloadContext;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import squeek.appleskin.ModInfo;
 
 public record MessageExhaustionSync(float exhaustionLevel) implements CustomPacketPayload
 {
-	public static final ResourceLocation ID = new ResourceLocation(ModInfo.MODID, "exhaustion");
-
-	public MessageExhaustionSync(final FriendlyByteBuf buffer)
-	{
-		this(buffer.readFloat());
-	}
-
-	@Override
-	public void write(final FriendlyByteBuf buffer)
-	{
-		buffer.writeFloat(exhaustionLevel());
-	}
+	public static final Type<MessageExhaustionSync> TYPE = new Type<>(new ResourceLocation(ModInfo.MODID, "exhaustion"));
+	public static final StreamCodec<RegistryFriendlyByteBuf, MessageExhaustionSync> CODEC = StreamCodec.composite(
+			ByteBufCodecs.FLOAT,
+			MessageExhaustionSync::exhaustionLevel,
+			MessageExhaustionSync::new
+	);
 
 	@Override
-	public ResourceLocation id()
+	public Type<? extends CustomPacketPayload> type()
 	{
-		return ID;
+		return TYPE;
 	}
 
-	public static void handle(final MessageExhaustionSync message, final PlayPayloadContext ctx)
+	public static void handle(final MessageExhaustionSync message, final IPayloadContext ctx)
 	{
-		ctx.workHandler().submitAsync(() -> {
-			ctx.player().ifPresent(player -> player.getFoodData().setExhaustion(message.exhaustionLevel()));
+		ctx.enqueueWork(() -> {
+			ctx.player().getFoodData().setExhaustion(message.exhaustionLevel());
 		});
 	}
 }
