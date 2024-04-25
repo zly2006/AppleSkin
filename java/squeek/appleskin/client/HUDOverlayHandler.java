@@ -80,7 +80,7 @@ public class HUDOverlayHandler
 
 		public boolean shouldRenderOverlay(Player player, Minecraft mc, GuiGraphics guiGraphics)
 		{
-			return true;
+			return mc.gameMode != null && mc.gameMode.canHurtPlayer();
 		}
 	}
 
@@ -134,6 +134,9 @@ public class HUDOverlayHandler
 		@Override
 		public boolean shouldRenderOverlay(Player player, Minecraft mc, GuiGraphics guiGraphics)
 		{
+			if (!super.shouldRenderOverlay(player, mc, guiGraphics))
+				return false;
+
 			// hide when is mounted.
 			if (player.getVehicle() instanceof LivingEntity)
 				return false;
@@ -193,6 +196,9 @@ public class HUDOverlayHandler
 		@Override
 		public boolean shouldRenderOverlay(Player player, Minecraft mc, GuiGraphics guiGraphics)
 		{
+			if (!super.shouldRenderOverlay(player, mc, guiGraphics))
+				return false;
+
 			return ModConfig.SHOW_FOOD_VALUES_OVERLAY.get();
 		}
 	}
@@ -234,6 +240,9 @@ public class HUDOverlayHandler
 
 		@Override
 		public boolean shouldRenderOverlay(Player player, Minecraft mc, GuiGraphics guiGraphics) {
+			if (!super.shouldRenderOverlay(player, mc, guiGraphics))
+				return false;
+
 			return ModConfig.SHOW_SATURATION_OVERLAY.get();
 		}
 	}
@@ -257,6 +266,9 @@ public class HUDOverlayHandler
 		@Override
 		public boolean shouldRenderOverlay(Player player, Minecraft mc, GuiGraphics guiGraphics)
 		{
+			if (!super.shouldRenderOverlay(player, mc, guiGraphics))
+				return false;
+
 			// hide when is mounted.
 			if (player.getVehicle() instanceof LivingEntity)
 				return false;
