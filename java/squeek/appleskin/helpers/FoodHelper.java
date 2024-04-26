@@ -35,14 +35,18 @@ public class FoodHelper
 		return itemStack.getOrDefault(DataComponentTypes.FOOD, EMPTY_FOOD_COMPONENT);
 	}
 
-	public static class QueriedFoodResult {
+	public static class QueriedFoodResult
+	{
 		public FoodComponent defaultFoodComponent;
 		public FoodComponent modifiedFoodComponent;
 
-		public QueriedFoodResult(FoodComponent defaultFoodComponent, FoodComponent modifiedFoodComponent)
+		public final ItemStack itemStack;
+
+		public QueriedFoodResult(FoodComponent defaultFoodComponent, FoodComponent modifiedFoodComponent, ItemStack itemStack)
 		{
 			this.defaultFoodComponent = defaultFoodComponent;
 			this.modifiedFoodComponent = modifiedFoodComponent;
+			this.itemStack = itemStack;
 		}
 	}
 
@@ -55,7 +59,7 @@ public class FoodHelper
 		FoodValuesEvent foodValuesEvent = new FoodValuesEvent(player, itemStack, defaultFood, defaultFood);
 		FoodValuesEvent.EVENT.invoker().interact(foodValuesEvent);
 
-		return new QueriedFoodResult(foodValuesEvent.defaultFoodComponent, foodValuesEvent.modifiedFoodComponent);
+		return new QueriedFoodResult(foodValuesEvent.defaultFoodComponent, foodValuesEvent.modifiedFoodComponent, itemStack);
 	}
 
 	public static boolean isRotten(FoodComponent foodComponent)

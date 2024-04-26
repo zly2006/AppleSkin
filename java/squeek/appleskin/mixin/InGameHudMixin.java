@@ -18,13 +18,20 @@ public class InGameHudMixin
 	private void renderFoodPre(DrawContext context, PlayerEntity player, int top, int right, CallbackInfo info)
 	{
 		if (HUDOverlayHandler.INSTANCE != null)
-			HUDOverlayHandler.INSTANCE.onPreRender(context, player, top, right);
+			HUDOverlayHandler.INSTANCE.onPreRenderFood(context, player, top, right);
 	}
 
 	@Inject(at = @At("RETURN"), method = "renderFood")
 	private void renderFoodPost(DrawContext context, PlayerEntity player, int top, int right, CallbackInfo info)
 	{
 		if (HUDOverlayHandler.INSTANCE != null)
-			HUDOverlayHandler.INSTANCE.onRender(context, player, top, right);
+			HUDOverlayHandler.INSTANCE.onRenderFood(context, player, top, right);
+	}
+
+	@Inject(at = @At("RETURN"), method = "renderHealthBar")
+	private void renderHealthPost(DrawContext context, PlayerEntity player, int left, int top, int lines, int regeneratingHeartIndex, float maxHealth, int lastHealth, int health, int absorption, boolean blinking, CallbackInfo info)
+	{
+		if (HUDOverlayHandler.INSTANCE != null)
+			HUDOverlayHandler.INSTANCE.onRenderHealth(context, player, left, top, lines, regeneratingHeartIndex, maxHealth, lastHealth, health, absorption, blinking);
 	}
 }
