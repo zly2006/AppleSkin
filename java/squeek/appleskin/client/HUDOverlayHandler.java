@@ -40,8 +40,7 @@ public class HUDOverlayHandler
 	protected static int foodIconsOffset;
 	protected static int healthIconsOffset;
 
-	private static final HealthBarOffsetsCache healthBarOffsets = new HealthBarOffsetsCache();
-	private static final HungerBarOffsetsCache foodBarOffsets = new HungerBarOffsetsCache();
+	private static final OffsetsCache barOffsets = new OffsetsCache();
 	private static final HeldFoodCache heldFood = new HeldFoodCache();
 
 	private static final RandomSource random = RandomSource.create();
@@ -141,7 +140,7 @@ public class HUDOverlayHandler
 				return false;
 
 			// Offsets size is set to zero intentionally to disable rendering when health is infinite.
-			if (healthBarOffsets.offsets(guiTicks, player).isEmpty())
+			if (barOffsets.healthBarOffsets(guiTicks, player).isEmpty())
 				return false;
 
 			return ModConfig.SHOW_FOOD_HEALTH_HUD_OVERLAY.get();
@@ -282,7 +281,7 @@ public class HUDOverlayHandler
 
 		int iconSize = 9;
 
-		var offsets = foodBarOffsets.offsets(guiTicks, player);
+		var offsets = barOffsets.foodBarOffsets(guiTicks, player);
 		for (int i = startSaturationBar; i < endSaturationBar; ++i) {
 			// gets the offset that needs to be render of icon
 			IntPoint offset = offsets.get(i);
@@ -325,7 +324,7 @@ public class HUDOverlayHandler
 		int iconStartOffset = 16;
 		int iconSize = 9;
 
-		var offsets = foodBarOffsets.offsets(guiTicks, player);
+		var offsets = barOffsets.foodBarOffsets(guiTicks, player);
 		for (int i = startFoodBars; i < endFoodBars; ++i)
 		{
 			// gets the offset that needs to be render of icon
@@ -365,10 +364,9 @@ public class HUDOverlayHandler
 		int startHealthBars = (int) Math.max(0, (Math.ceil(health) / 2.0F));
 		int endHealthBars = (int) Math.max(0, Math.ceil(modifiedHealth / 2.0F));
 
-		int iconStartOffset = 16;
 		int iconSize = 9;
 
-		var offsets = healthBarOffsets.offsets(guiTicks, player);
+		var offsets = barOffsets.healthBarOffsets(guiTicks, player);
 		for (int i = startHealthBars; i < endHealthBars; ++i) {
 			// gets the offset that needs to be render of icon
 			IntPoint offset = offsets.get(i);
@@ -493,31 +491,22 @@ public class HUDOverlayHandler
 		return true;
 	}
 
-	private static abstract class OffsetsCache
+	private static class OffsetsCache
 	{
-		protected final Vector<IntPoint> offsets = new Vector<>();
+		protected final Vector<IntPoint> foodBarOffsets = new Vector<>();
+		protected final Vector<IntPoint> healthBarOffsets = new Vector<>();
 		public int lastGuiTick = 0;
 
-		protected abstract void generate(int guiTick, Player player);
-
-		public Vector<IntPoint> offsets(int guiTick, Player player)  {
-			if (guiTick != lastGuiTick) {
-				generate(guiTick, player);
-				lastGuiTick = guiTick;
-			}
-			return this.offsets;
-		}
-	}
-
-	private static class HealthBarOffsetsCache extends OffsetsCache
-	{
-		@Override
 		protected void generate(int guiTicks, Player player)
 		{
-			// hard code in `InGameHUD`
-			random.setSeed((long) (guiTicks * 312871L));
+			// Note: Both health and food offsets are generated together
+			// because the PRNG used for the health icon offsets affect
+			// the PRNG of the food icon offsets. By generating the offsets
+			// together, we can match the PRNG of the Vanilla HUD.
 
 			final int preferHealthBars = 10;
+			final int preferFoodBars = 10;
+
 			final float maxHealth = player.getMaxHealth();
 			final float absorptionHealth = (float) Math.ceil(player.getAbsorptionAmount());
 
@@ -529,27 +518,39 @@ public class HUDOverlayHandler
 			// Note: Infinite and > INT_MAX absorption has been seen in the wild.
 			// This will effectively disable rendering whenever health is unexpectedly large.
 			if (healthBars < 0 || healthBars > 1000) {
-				offsets.setSize(0);
-				return;
+				healthBars = 0;
 			}
 
 			int healthRows = (int) Math.ceil((float) healthBars / 10.0F);
 
 			int healthRowHeight = Math.max(10 - (healthRows - 2), 3);
 
+			boolean shouldAnimatedFood = false;
 			boolean shouldAnimatedHealth = false;
 
 			// when some mods using custom render, we need to least provide an option to cancel animation
 			if (ModConfig.SHOW_VANILLA_ANIMATION_OVERLAY.get())
 			{
+				FoodData stats = player.getFoodData();
+
+				// in vanilla saturation level is zero will show hunger animation
+				float saturationLevel = stats.getSaturationLevel();
+				int foodLevel = stats.getFoodLevel();
+				shouldAnimatedFood = saturationLevel <= 0.0F && guiTicks % (foodLevel * 3 + 1) == 0;
+
 				// in vanilla health is too low (below 5) will show heartbeat animation
 				// when regeneration will also show heartbeat animation, but we don't need now
 				shouldAnimatedHealth = Math.ceil(player.getHealth()) <= 4;
 			}
 
+			// hard code in `InGameHUD`
+			random.setSeed((long) (guiTicks * 312871L));
+
 			// adjust the size
-			if (offsets.size() != healthBars)
-				offsets.setSize(healthBars);
+			if (foodBarOffsets.size() != preferFoodBars)
+				foodBarOffsets.setSize(preferFoodBars);
+			if (healthBarOffsets.size() != healthBars)
+				healthBarOffsets.setSize(healthBars);
 
 			// left alignment, multiple rows, reverse
 			for (int i = healthBars - 1; i >= 0; --i)
@@ -562,41 +563,16 @@ public class HUDOverlayHandler
 					y += random.nextInt(2);
 
 				// reuse the point object to reduce memory usage
-				IntPoint point = offsets.get(i);
+				IntPoint point = healthBarOffsets.get(i);
 				if (point == null)
 				{
 					point = new IntPoint();
-					offsets.set(i, point);
+					healthBarOffsets.set(i, point);
 				}
 
 				point.x = x;
 				point.y = y;
 			}
-		}
-	}
-
-	private static class HungerBarOffsetsCache extends OffsetsCache
-	{
-		@Override
-		protected void generate(int guiTicks, Player player)
-		{
-			final int preferFoodBars = 10;
-
-			boolean shouldAnimatedFood = false;
-
-			// when some mods using custom render, we need to least provide an option to cancel animation
-			if (ModConfig.SHOW_VANILLA_ANIMATION_OVERLAY.get())
-			{
-				FoodData stats = player.getFoodData();
-
-				// in vanilla saturation level is zero will show hunger animation
-				float saturationLevel = stats.getSaturationLevel();
-				int foodLevel = stats.getFoodLevel();
-				shouldAnimatedFood = saturationLevel <= 0.0F && guiTicks % (foodLevel * 3 + 1) == 0;
-			}
-
-			if (offsets.size() != preferFoodBars)
-				offsets.setSize(preferFoodBars);
 
 			// right alignment, single row
 			for (int i = 0; i < preferFoodBars; ++i)
@@ -609,16 +585,34 @@ public class HUDOverlayHandler
 					y += random.nextInt(3) - 1;
 
 				// reuse the point object to reduce memory usage
-				IntPoint point = offsets.get(i);
+				IntPoint point = foodBarOffsets.get(i);
 				if (point == null)
 				{
 					point = new IntPoint();
-					offsets.set(i, point);
+					foodBarOffsets.set(i, point);
 				}
 
 				point.x = x;
 				point.y = y;
 			}
+		}
+
+		public Vector<IntPoint> healthBarOffsets(int guiTick, Player player)
+		{
+			if (guiTick != lastGuiTick) {
+				generate(guiTick, player);
+				lastGuiTick = guiTick;
+			}
+			return this.healthBarOffsets;
+		}
+
+		public Vector<IntPoint> foodBarOffsets(int guiTicks, Player player)
+		{
+			if (guiTicks != lastGuiTick) {
+				generate(guiTicks, player);
+				lastGuiTick = guiTicks;
+			}
+			return this.foodBarOffsets;
 		}
 	}
 
