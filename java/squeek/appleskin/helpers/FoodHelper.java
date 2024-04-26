@@ -11,10 +11,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.common.NeoForge;
-import squeek.appleskin.ModConfig;
-import squeek.appleskin.api.event.FoodValuesEvent;
-
 import org.jetbrains.annotations.Nullable;
+import squeek.appleskin.api.event.FoodValuesEvent;
 
 public class FoodHelper
 {
@@ -54,7 +52,8 @@ public class FoodHelper
 	}
 
 	@Nullable
-	public static QueriedFoodResult query(ItemStack itemStack, Player player) {
+	public static QueriedFoodResult query(ItemStack itemStack, Player player)
+	{
 		if (!isFood(itemStack))
 			return null;
 

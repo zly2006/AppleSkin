@@ -12,9 +12,9 @@ public record MessageExhaustionSync(float exhaustionLevel) implements CustomPack
 {
 	public static final Type<MessageExhaustionSync> TYPE = new Type<>(new ResourceLocation(ModInfo.MODID, "exhaustion"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, MessageExhaustionSync> CODEC = StreamCodec.composite(
-			ByteBufCodecs.FLOAT,
-			MessageExhaustionSync::exhaustionLevel,
-			MessageExhaustionSync::new
+		ByteBufCodecs.FLOAT,
+		MessageExhaustionSync::exhaustionLevel,
+		MessageExhaustionSync::new
 	);
 
 	@Override

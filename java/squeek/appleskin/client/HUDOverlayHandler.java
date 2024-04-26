@@ -95,7 +95,8 @@ public class HUDOverlayHandler
 	}
 
 	// TODO: missing healthBlinkTime, see net.minecraft.client.gui.Gui#renderHealthLevel
-	public static class HealthOverlay extends Overlay {
+	public static class HealthOverlay extends Overlay
+	{
 		public static final ResourceLocation ID = new ResourceLocation(ModInfo.MODID, "health_restored");
 
 		@Override
@@ -279,7 +280,8 @@ public class HUDOverlayHandler
 		int iconSize = 9;
 
 		var offsets = barOffsets.foodBarOffsets(guiTicks, player);
-		for (int i = startSaturationBar; i < endSaturationBar; ++i) {
+		for (int i = startSaturationBar; i < endSaturationBar; ++i)
+		{
 			// gets the offset that needs to be render of icon
 			IntPoint offset = offsets.get(i);
 			if (offset == null)
@@ -364,7 +366,8 @@ public class HUDOverlayHandler
 		int iconSize = 9;
 
 		var offsets = barOffsets.healthBarOffsets(guiTicks, player);
-		for (int i = startHealthBars; i < endHealthBars; ++i) {
+		for (int i = startHealthBars; i < endHealthBars; ++i)
+		{
 			// gets the offset that needs to be render of icon
 			IntPoint offset = offsets.get(i);
 			if (offset == null)
@@ -514,7 +517,8 @@ public class HUDOverlayHandler
 			// for thousands of hearts.
 			// Note: Infinite and > INT_MAX absorption has been seen in the wild.
 			// This will effectively disable rendering whenever health is unexpectedly large.
-			if (healthBars < 0 || healthBars > 1000) {
+			if (healthBars < 0 || healthBars > 1000)
+			{
 				healthBars = 0;
 			}
 
@@ -596,7 +600,8 @@ public class HUDOverlayHandler
 
 		public Vector<IntPoint> healthBarOffsets(int guiTick, Player player)
 		{
-			if (guiTick != lastGuiTick) {
+			if (guiTick != lastGuiTick)
+			{
 				generate(guiTick, player);
 				lastGuiTick = guiTick;
 			}
@@ -605,7 +610,8 @@ public class HUDOverlayHandler
 
 		public Vector<IntPoint> foodBarOffsets(int guiTicks, Player player)
 		{
-			if (guiTicks != lastGuiTick) {
+			if (guiTicks != lastGuiTick)
+			{
 				generate(guiTicks, player);
 				lastGuiTick = guiTicks;
 			}
@@ -643,7 +649,8 @@ public class HUDOverlayHandler
 
 		public FoodHelper.QueriedFoodResult result(int guiTick, Player player)
 		{
-			if (guiTick != lastGuiTick) {
+			if (guiTick != lastGuiTick)
+			{
 				query(player);
 				lastGuiTick = guiTick;
 			}

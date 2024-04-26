@@ -12,9 +12,9 @@ public record MessageSaturationSync(float saturationLevel) implements CustomPack
 {
 	public static final Type<MessageSaturationSync> TYPE = new Type<>(new ResourceLocation(ModInfo.MODID, "saturation"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, MessageSaturationSync> CODEC = StreamCodec.composite(
-			ByteBufCodecs.FLOAT,
-			MessageSaturationSync::saturationLevel,
-			MessageSaturationSync::new
+		ByteBufCodecs.FLOAT,
+		MessageSaturationSync::saturationLevel,
+		MessageSaturationSync::new
 	);
 
 
