@@ -6,8 +6,8 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingEvent.LivingTickEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlerEvent;
-import net.neoforged.neoforge.network.registration.IPayloadRegistrar;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import squeek.appleskin.ModInfo;
 
 import java.util.HashMap;
@@ -18,17 +18,14 @@ public class SyncHandler
 {
 	private static final String PROTOCOL_VERSION = "1.0.0";
 
-	public static void register(final RegisterPayloadHandlerEvent event)
+	public static void register(final RegisterPayloadHandlersEvent event)
 	{
-		final IPayloadRegistrar registrar = event.registrar(ModInfo.MODID)
+		final PayloadRegistrar registrar = event.registrar(ModInfo.MODID)
 			.versioned(PROTOCOL_VERSION)
 			.optional();
-		registrar.play(MessageExhaustionSync.ID,
-			MessageExhaustionSync::new,
-			handler -> handler.client(MessageExhaustionSync::handle));
-		registrar.play(MessageSaturationSync.ID,
-			MessageSaturationSync::new,
-			handler -> handler.client(MessageSaturationSync::handle));
+
+		registrar.playToClient(MessageExhaustionSync.TYPE, MessageExhaustionSync.CODEC, MessageExhaustionSync::handle);
+		registrar.playToClient(MessageSaturationSync.TYPE, MessageSaturationSync.CODEC, MessageSaturationSync::handle);
 
 		NeoForge.EVENT_BUS.register(new SyncHandler());
 	}
@@ -53,7 +50,7 @@ public class SyncHandler
 		if (lastSaturationLevel == null || lastSaturationLevel != player.getFoodData().getSaturationLevel())
 		{
 			var msg = new MessageSaturationSync(player.getFoodData().getSaturationLevel());
-			PacketDistributor.PLAYER.with(player).send(msg);
+			PacketDistributor.sendToPlayer(player, msg);
 			lastSaturationLevels.put(player.getUUID(), player.getFoodData().getSaturationLevel());
 		}
 
@@ -61,7 +58,7 @@ public class SyncHandler
 		if (lastExhaustionLevel == null || Math.abs(lastExhaustionLevel - exhaustionLevel) >= 0.01f)
 		{
 			var msg = new MessageExhaustionSync(exhaustionLevel);
-			PacketDistributor.PLAYER.with(player).send(msg);
+			PacketDistributor.sendToPlayer(player, msg);
 			lastExhaustionLevels.put(player.getUUID(), exhaustionLevel);
 		}
 	}

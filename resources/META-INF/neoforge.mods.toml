@@ -16,6 +16,6 @@ description="Adds various food-related HUD improvements"
 [[dependencies.appleskin]]
     modId="neoforge"
     type="required"
-    versionRange="[20.4,)"
+    versionRange="[20.5-beta,)"
     ordering="NONE"
     side="CLIENT"

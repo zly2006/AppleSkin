@@ -1,6 +1,6 @@
 package squeek.appleskin.helpers;
 
-import com.mojang.datafixers.util.Pair;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -10,53 +10,69 @@ import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
-import squeek.appleskin.api.food.FoodValues;
+import net.neoforged.neoforge.common.NeoForge;
+import squeek.appleskin.ModConfig;
+import squeek.appleskin.api.event.FoodValuesEvent;
+
+import org.jetbrains.annotations.Nullable;
 
 public class FoodHelper
 {
-	public static boolean isFood(ItemStack itemStack, Player player)
+	public static boolean isFood(ItemStack itemStack)
 	{
-		return itemStack.getItem().getFoodProperties(itemStack, player) != null;
+		return itemStack.has(DataComponents.FOOD);
 	}
 
-	public static boolean canConsume(ItemStack itemStack, Player player)
+	public static boolean canConsume(Player player, FoodProperties foodProperties)
 	{
-		// item is not a food that can be consume
-		if (!isFood(itemStack, player))
-			return false;
-
-		FoodProperties itemFood = itemStack.getItem().getFoodProperties(itemStack, player);
-		if (itemFood == null)
-			return false;
-
-		return player.canEat(itemFood.canAlwaysEat());
+		return player.canEat(foodProperties.canAlwaysEat());
 	}
 
-	public static FoodValues getDefaultFoodValues(ItemStack itemStack, Player player)
-	{
-		FoodProperties itemFood = itemStack.getItem().getFoodProperties(itemStack, player);
-		int hunger = itemFood != null ? itemFood.getNutrition() : 0;
-		float saturationModifier = itemFood != null ? itemFood.getSaturationModifier() : 0;
+	public static FoodProperties EMPTY_FOOD_PROPERTIES = new FoodProperties.Builder().build();
 
-		return new FoodValues(hunger, saturationModifier);
+	/**
+	 * Assumes itemStack is known to be a food, always returns a non-null FoodComponent
+	 */
+	public static FoodProperties getDefaultFoodValues(ItemStack itemStack, Player player)
+	{
+		return itemStack.getOrDefault(DataComponents.FOOD, EMPTY_FOOD_PROPERTIES);
 	}
 
-	public static FoodValues getModifiedFoodValues(ItemStack itemStack, Player player)
+	public static class QueriedFoodResult
 	{
-		// Previously, this would use AppleCore to get the modified values, but since AppleCore doesn't
-		// exist on this MC version and https://github.com/MinecraftForge/MinecraftForge/pull/7266
-		// hasn't been merged, we just return the defaults here.
-		return getDefaultFoodValues(itemStack, player);
-	}
+		public FoodProperties defaultFoodProperties;
+		public FoodProperties modifiedFoodProperties;
 
-	public static boolean isRotten(ItemStack itemStack, Player player)
-	{
-		if (!isFood(itemStack, player))
-			return false;
+		public final ItemStack itemStack;
 
-		for (Pair<MobEffectInstance, Float> effect : itemStack.getItem().getFoodProperties(itemStack, player).getEffects())
+		public QueriedFoodResult(FoodProperties defaultFoodProperties, FoodProperties modifiedFoodProperties, ItemStack itemStack)
 		{
-			if (effect.getFirst() != null && effect.getFirst().getEffect() != null && effect.getFirst().getEffect().getCategory() == MobEffectCategory.HARMFUL)
+			this.defaultFoodProperties = defaultFoodProperties;
+			this.modifiedFoodProperties = modifiedFoodProperties;
+			this.itemStack = itemStack;
+		}
+	}
+
+	@Nullable
+	public static QueriedFoodResult query(ItemStack itemStack, Player player) {
+		if (!isFood(itemStack))
+			return null;
+
+		FoodProperties defaultFood = getDefaultFoodValues(itemStack, player);
+
+		FoodValuesEvent foodValuesEvent = new FoodValuesEvent(player, itemStack, defaultFood, defaultFood);
+		NeoForge.EVENT_BUS.post(foodValuesEvent);
+
+		return new QueriedFoodResult(foodValuesEvent.defaultFoodProperties, foodValuesEvent.modifiedFoodProperties, itemStack);
+	}
+
+
+	public static boolean isRotten(FoodProperties foodProperties)
+	{
+		for (FoodProperties.PossibleEffect effect : foodProperties.effects())
+		{
+			MobEffectInstance effectInstance = effect.effect();
+			if (effectInstance.getEffect().value().getCategory() == MobEffectCategory.HARMFUL)
 			{
 				return true;
 			}
@@ -64,33 +80,30 @@ public class FoodHelper
 		return false;
 	}
 
-	public static float getEstimatedHealthIncrement(ItemStack itemStack, FoodValues modifiedFoodValues, Player player)
+	public static float getEstimatedHealthIncrement(Player player, FoodProperties foodProperties)
 	{
-		if (!isFood(itemStack, player))
-			return 0;
-
 		if (!player.isHurt())
 			return 0;
 
 		FoodData stats = player.getFoodData();
 		Level world = player.getCommandSenderWorld();
 
-		int foodLevel = Math.min(stats.getFoodLevel() + modifiedFoodValues.hunger, 20);
+		int foodLevel = Math.min(stats.getFoodLevel() + foodProperties.nutrition(), 20);
 		float healthIncrement = 0;
 
 		// health for natural regen
 		if (foodLevel >= 18.0F && world != null && world.getGameRules().getBoolean(GameRules.RULE_NATURAL_REGENERATION))
 		{
-			float saturationLevel = Math.min(stats.getSaturationLevel() + modifiedFoodValues.getSaturationIncrement(), (float) foodLevel);
+			float saturationLevel = Math.min(stats.getSaturationLevel() + foodProperties.saturation(), (float) foodLevel);
 			float exhaustionLevel = stats.getExhaustionLevel();
 			healthIncrement = getEstimatedHealthIncrement(foodLevel, saturationLevel, exhaustionLevel);
 		}
 
 		// health for regeneration effect
-		for (Pair<MobEffectInstance, Float> effect : itemStack.getItem().getFoodProperties(itemStack, player).getEffects())
+		for (FoodProperties.PossibleEffect effect : foodProperties.effects())
 		{
-			MobEffectInstance effectInstance = effect.getFirst();
-			if (effectInstance != null && effectInstance.getEffect() == MobEffects.REGENERATION)
+			MobEffectInstance effectInstance = effect.effect();
+			if (effectInstance.is(MobEffects.REGENERATION))
 			{
 				int amplifier = effectInstance.getAmplifier();
 				int duration = effectInstance.getDuration();

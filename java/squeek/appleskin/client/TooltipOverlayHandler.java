@@ -10,6 +10,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
@@ -21,7 +22,6 @@ import net.neoforged.neoforge.common.NeoForge;
 import squeek.appleskin.ModConfig;
 import squeek.appleskin.api.event.FoodValuesEvent;
 import squeek.appleskin.api.event.TooltipOverlayEvent;
-import squeek.appleskin.api.food.FoodValues;
 import squeek.appleskin.helpers.FoodHelper;
 import squeek.appleskin.helpers.KeyHelper;
 import squeek.appleskin.helpers.TextureHelper;
@@ -117,8 +117,8 @@ public class TooltipOverlayHandler
 			if (gui == null)
 				return;
 
-			FoodValues defaultFood = foodTooltip.defaultFood;
-			FoodValues modifiedFood = foodTooltip.modifiedFood;
+			FoodProperties defaultFood = foodTooltip.defaultFood;
+			FoodProperties modifiedFood = foodTooltip.modifiedFood;
 
 			// Notify everyone that we should render tooltip overlay
 			TooltipOverlayEvent.Render renderEvent = new TooltipOverlayEvent.Render(itemStack, x, y, guiGraphics, defaultFood, modifiedFood);
@@ -137,13 +137,13 @@ public class TooltipOverlayHandler
 			int offsetX = x;
 			int offsetY = y;
 
-			int defaultHunger = defaultFood.hunger;
-			int modifiedHunger = modifiedFood.hunger;
+			int defaultHunger = defaultFood.nutrition();
+			int modifiedHunger = modifiedFood.nutrition();
 
 			// Render from right to left so that the icons 'face' the right way
 			offsetX += (foodTooltip.hungerBars - 1) * 9;
 
-			boolean isRotten = FoodHelper.isRotten(itemStack, mc.player);
+			boolean isRotten = FoodHelper.isRotten(modifiedFood);
 
 			for (int i = 0; i < foodTooltip.hungerBars * 2; i += 2)
 			{
@@ -186,7 +186,7 @@ public class TooltipOverlayHandler
 			offsetX = x;
 			offsetY += 10;
 
-			float modifiedSaturationIncrement = modifiedFood.getSaturationIncrement();
+			float modifiedSaturationIncrement = modifiedFood.saturation();
 			float absModifiedSaturationIncrement = Math.abs(modifiedSaturationIncrement);
 
 			// Render from right to left so that the icons 'face' the right way
@@ -229,8 +229,8 @@ public class TooltipOverlayHandler
 
 	static class FoodTooltip implements TooltipComponent
 	{
-		private FoodValues defaultFood;
-		private FoodValues modifiedFood;
+		private FoodProperties defaultFood;
+		private FoodProperties modifiedFood;
 
 		private int biggestHunger;
 		private float biggestSaturationIncrement;
@@ -243,14 +243,14 @@ public class TooltipOverlayHandler
 
 		private ItemStack itemStack;
 
-		FoodTooltip(ItemStack itemStack, FoodValues defaultFood, FoodValues modifiedFood, Player player)
+		FoodTooltip(ItemStack itemStack, FoodProperties defaultFood, FoodProperties modifiedFood, Player player)
 		{
 			this.itemStack = itemStack;
 			this.defaultFood = defaultFood;
 			this.modifiedFood = modifiedFood;
 
-			biggestHunger = Math.max(defaultFood.hunger, modifiedFood.hunger);
-			biggestSaturationIncrement = Math.max(defaultFood.getSaturationIncrement(), modifiedFood.getSaturationIncrement());
+			biggestHunger = Math.max(defaultFood.nutrition(), modifiedFood.nutrition());
+			biggestSaturationIncrement = Math.max(defaultFood.saturation(), modifiedFood.saturation());
 
 			hungerBars = (int) Math.ceil(Math.abs(biggestHunger) / 2f);
 			if (hungerBars > 10)
@@ -284,13 +284,17 @@ public class TooltipOverlayHandler
 		if (!shouldShowTooltip(hoveredStack, mc.player))
 			return;
 
-		FoodValues defaultFood = FoodHelper.getDefaultFoodValues(hoveredStack, mc.player);
-		FoodValues modifiedFood = FoodHelper.getModifiedFoodValues(hoveredStack, mc.player);
+		FoodHelper.QueriedFoodResult queriedFoodResult = FoodHelper.query(hoveredStack, mc.player);
+		if (queriedFoodResult == null)
+			return;
+
+		FoodProperties defaultFood = queriedFoodResult.defaultFoodProperties;
+		FoodProperties modifiedFood = queriedFoodResult.modifiedFoodProperties;
 
 		FoodValuesEvent foodValuesEvent = new FoodValuesEvent(mc.player, hoveredStack, defaultFood, modifiedFood);
 		NeoForge.EVENT_BUS.post(foodValuesEvent);
-		defaultFood = foodValuesEvent.defaultFoodValues;
-		modifiedFood = foodValuesEvent.modifiedFoodValues;
+		defaultFood = foodValuesEvent.defaultFoodProperties;
+		modifiedFood = foodValuesEvent.modifiedFoodProperties;
 
 		// Notify everyone that we should render tooltip overlay
 		TooltipOverlayEvent.Pre prerenderEvent = new TooltipOverlayEvent.Pre(hoveredStack, defaultFood, modifiedFood);
@@ -312,7 +316,7 @@ public class TooltipOverlayHandler
 		if (!shouldShowTooltip)
 			return false;
 
-		if (!FoodHelper.isFood(hoveredStack, player))
+		if (!FoodHelper.isFood(hoveredStack))
 			return false;
 
 		return true;

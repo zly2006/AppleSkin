@@ -3,32 +3,31 @@ package squeek.appleskin.client;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.LayeredDraw;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodData;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
-import net.neoforged.neoforge.client.gui.overlay.ExtendedGui;
-import net.neoforged.neoforge.client.gui.overlay.GuiOverlayManager;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.TickEvent;
 import org.lwjgl.opengl.GL11;
 import squeek.appleskin.ModConfig;
-import squeek.appleskin.api.event.FoodValuesEvent;
+import squeek.appleskin.ModInfo;
 import squeek.appleskin.api.event.HUDOverlayEvent;
-import squeek.appleskin.api.food.FoodValues;
 import squeek.appleskin.helpers.FoodHelper;
 import squeek.appleskin.helpers.HungerHelper;
 import squeek.appleskin.helpers.TextureHelper;
 import squeek.appleskin.util.IntPoint;
 
-import java.util.Random;
 import java.util.Vector;
 
 @OnlyIn(Dist.CLIENT)
@@ -38,198 +37,235 @@ public class HUDOverlayHandler
 	private static float flashAlpha = 0f;
 	private static byte alphaDir = 1;
 	protected static int foodIconsOffset;
+	protected static int healthIconsOffset;
 
 	public static final Vector<IntPoint> healthBarOffsets = new Vector<>();
 	public static final Vector<IntPoint> foodBarOffsets = new Vector<>();
 
-	private static final Random random = new Random();
+	private static final RandomSource random = RandomSource.create();
 
-	public static void init()
+	public static void register(RegisterGuiLayersEvent event)
 	{
-		NeoForge.EVENT_BUS.register(new HUDOverlayHandler());
+		// register setup overlays.
+		event.registerBelow(VanillaGuiLayers.PLAYER_HEALTH, HealthOverlayPre.ID, new HealthOverlayPre());
+		event.registerBelow(VanillaGuiLayers.FOOD_LEVEL, HungerOverlayPre.ID,new HungerOverlayPre());
+
+		// register render overlays.
+		event.registerAbove(VanillaGuiLayers.PLAYER_HEALTH, HealthOverlay.ID, new HealthOverlay());
+		event.registerAbove(VanillaGuiLayers.FOOD_LEVEL, HungerOverlay.ID, new HungerOverlay());
+		event.registerAbove(VanillaGuiLayers.FOOD_LEVEL, SaturationOverlay.ID, new SaturationOverlay());
+		event.registerBelow(VanillaGuiLayers.FOOD_LEVEL, ExhaustionOverlay.ID, new ExhaustionOverlay());
+
+		// register tick callback.
+		NeoForge.EVENT_BUS.addListener(HUDOverlayHandler::onClientTick);
 	}
 
-	static ResourceLocation FOOD_LEVEL_ELEMENT = new ResourceLocation("minecraft", "food_level");
-	static ResourceLocation PLAYER_HEALTH_ELEMENT = new ResourceLocation("minecraft", "player_health");
-
-	@SubscribeEvent
-	public void onRenderGuiOverlayPre(RenderGuiOverlayEvent.Pre event)
+	public static abstract class Overlay implements LayeredDraw.Layer
 	{
-		if (event.getOverlay() == GuiOverlayManager.findOverlay(FOOD_LEVEL_ELEMENT))
+		public abstract void render(Player player, GuiGraphics guiGraphics, int left, int right, int top, int guiTicks);
+
+		@Override
+		public final void render(GuiGraphics guiGraphics, float partialTicks)
 		{
 			Minecraft mc = Minecraft.getInstance();
-			ExtendedGui gui = (ExtendedGui) mc.gui;
-			boolean isMounted = mc.player.getVehicle() instanceof LivingEntity;
-			if (!isMounted && !mc.options.hideGui && gui.shouldDrawSurvivalElements())
-			{
-				renderExhaustion(gui, event.getGuiGraphics(), event.getPartialTick(), event.getWindow().getScreenWidth(), event.getWindow().getScreenHeight());
-			}
-		}
-	}
-
-	@SubscribeEvent
-	public void onRenderGuiOverlayPost(RenderGuiOverlayEvent.Post event)
-	{
-		if (event.getOverlay() == GuiOverlayManager.findOverlay(FOOD_LEVEL_ELEMENT))
-		{
-			Minecraft mc = Minecraft.getInstance();
-			ExtendedGui gui = (ExtendedGui) mc.gui;
-			boolean isMounted = mc.player.getVehicle() instanceof LivingEntity;
-			if (!isMounted && !mc.options.hideGui && gui.shouldDrawSurvivalElements())
-			{
-				renderFoodOrHealthOverlay(gui, event.getGuiGraphics(), event.getPartialTick(), event.getWindow().getScreenWidth(), event.getWindow().getScreenHeight(), RenderOverlayType.FOOD);
-			}
-		}
-		else if (event.getOverlay() == GuiOverlayManager.findOverlay(PLAYER_HEALTH_ELEMENT))
-		{
-			Minecraft mc = Minecraft.getInstance();
-			ExtendedGui gui = (ExtendedGui) mc.gui;
-			if (!mc.options.hideGui && gui.shouldDrawSurvivalElements())
-			{
-				renderFoodOrHealthOverlay(gui, event.getGuiGraphics(), event.getPartialTick(), event.getWindow().getScreenWidth(), event.getWindow().getScreenHeight(), RenderOverlayType.HEALTH);
-			}
-		}
-	}
-
-	public static void renderExhaustion(ExtendedGui gui, GuiGraphics guiGraphics, float partialTicks, int screenWidth, int screenHeight)
-	{
-		foodIconsOffset = gui.rightHeight;
-
-		if (!ModConfig.SHOW_FOOD_EXHAUSTION_UNDERLAY.get())
-			return;
-
-		Minecraft mc = Minecraft.getInstance();
-		Player player = mc.player;
-		assert player != null;
-
-		int right = mc.getWindow().getGuiScaledWidth() / 2 + 91;
-		int top = mc.getWindow().getGuiScaledHeight() - foodIconsOffset;
-		float exhaustion = player.getFoodData().getExhaustionLevel();
-
-		// Notify everyone that we should render exhaustion hud overlay
-		HUDOverlayEvent.Exhaustion renderEvent = new HUDOverlayEvent.Exhaustion(exhaustion, right, top, guiGraphics);
-		NeoForge.EVENT_BUS.post(renderEvent);
-		if (!renderEvent.isCanceled())
-			drawExhaustionOverlay(renderEvent, mc, 1f);
-	}
-
-	enum RenderOverlayType
-	{
-		HEALTH,
-		FOOD,
-	}
-
-	public static void renderFoodOrHealthOverlay(ExtendedGui gui, GuiGraphics guiGraphics, float partialTicks, int screenWidth, int screenHeight, RenderOverlayType type)
-	{
-		if (!shouldRenderAnyOverlays())
-			return;
-
-		Minecraft mc = Minecraft.getInstance();
-		Player player = mc.player;
-		assert player != null;
-		FoodData stats = player.getFoodData();
-
-		int top = mc.getWindow().getGuiScaledHeight() - foodIconsOffset;
-		int left = mc.getWindow().getGuiScaledWidth() / 2 - 91; // left of health bar
-		int right = mc.getWindow().getGuiScaledWidth() / 2 + 91; // right of food bar
-
-		if (type == RenderOverlayType.HEALTH)
-			generateHealthBarOffsets(top, left, right, mc.gui.getGuiTicks(), player);
-		if (type == RenderOverlayType.FOOD)
-			generateHungerBarOffsets(top, left, right, mc.gui.getGuiTicks(), player);
-
-		HUDOverlayEvent.Saturation saturationRenderEvent = null;
-		if (type == RenderOverlayType.FOOD)
-		{
-			saturationRenderEvent = new HUDOverlayEvent.Saturation(stats.getSaturationLevel(), right, top, guiGraphics);
-
-			// cancel render overlay event when configuration disabled.
-			if (!ModConfig.SHOW_SATURATION_OVERLAY.get())
-				saturationRenderEvent.setCanceled(true);
-
-			// notify everyone that we should render saturation hud overlay
-			if (!saturationRenderEvent.isCanceled())
-				NeoForge.EVENT_BUS.post(saturationRenderEvent);
-
-			// the render saturation event maybe cancelled by other mods
-			if (!saturationRenderEvent.isCanceled())
-				drawSaturationOverlay(saturationRenderEvent, mc, 0, 1f);
-		}
-
-		// try to get the item stack in the player hand
-		ItemStack heldItem = player.getMainHandItem();
-		if (ModConfig.SHOW_FOOD_VALUES_OVERLAY_WHEN_OFFHAND.get() && !FoodHelper.canConsume(heldItem, player))
-			heldItem = player.getOffhandItem();
-
-		boolean shouldRenderHeldItemValues = !heldItem.isEmpty() && FoodHelper.canConsume(heldItem, player);
-		if (!shouldRenderHeldItemValues)
-		{
-			resetFlash();
-			return;
-		}
-
-		FoodValues modifiedFoodValues = FoodHelper.getModifiedFoodValues(heldItem, player);
-		FoodValuesEvent foodValuesEvent = new FoodValuesEvent(player, heldItem, FoodHelper.getDefaultFoodValues(heldItem, player), modifiedFoodValues);
-		NeoForge.EVENT_BUS.post(foodValuesEvent);
-		modifiedFoodValues = foodValuesEvent.modifiedFoodValues;
-
-		if (type == RenderOverlayType.HEALTH)
-		{
-			// Offsets size is set to zero intentionally to disable rendering when health is infinite.
-			if (healthBarOffsets.size() == 0)
+			if (mc.player == null || !shouldRenderOverlay(mc.player, mc, guiGraphics))
 				return;
 
-			if (!shouldShowEstimatedHealth(heldItem, modifiedFoodValues))
+			int top = guiGraphics.guiHeight();
+			int left = guiGraphics.guiWidth() / 2 - 91; // left of health bar
+			int right = guiGraphics.guiWidth() / 2 + 91;// right of food bar
+
+			render(mc.player, guiGraphics, left, right, top, mc.gui.getGuiTicks());
+		}
+
+		public boolean shouldRenderOverlay(Player player, Minecraft mc, GuiGraphics guiGraphics)
+		{
+			return true;
+		}
+	}
+
+	public static class HealthOverlayPre extends Overlay
+	{
+		public static final ResourceLocation ID = new ResourceLocation(ModInfo.MODID, "health_setup");
+
+		@Override
+		public void render(Player player, GuiGraphics guiGraphics, int left, int right, int top, int guiTicks)
+		{
+			healthIconsOffset = Minecraft.getInstance().gui.leftHeight;
+			// TODO: missing healthBlinkTime, check in net.minecraft.client.gui.Gui#renderHealthLevel
+			generateHealthBarOffsets(top - healthIconsOffset, left, right, guiTicks, player);
+		}
+	}
+
+	public static class HealthOverlay extends Overlay {
+		public static final ResourceLocation ID = new ResourceLocation(ModInfo.MODID, "health_restored");
+
+		@Override
+		public void render(Player player, GuiGraphics guiGraphics, int left, int right, int top, int guiTicks)
+		{
+			// draw health overlay if needed
+			if (!shouldShowEstimatedHealth(player))
 				return;
 
-			float foodHealthIncrement = FoodHelper.getEstimatedHealthIncrement(heldItem, modifiedFoodValues, player);
+			FoodHelper.QueriedFoodResult result = queryRenderHeldFood(player);
+			if (result == null)
+			{
+				resetFlash();
+				return;
+			}
+
+			float foodHealthIncrement = FoodHelper.getEstimatedHealthIncrement(player, result.modifiedFoodProperties);
 			float currentHealth = player.getHealth();
 			float modifiedHealth = Math.min(currentHealth + foodHealthIncrement, player.getMaxHealth());
 
 			// only create object when the estimated health is successfully
 			HUDOverlayEvent.HealthRestored healthRenderEvent = null;
 			if (currentHealth < modifiedHealth)
-				healthRenderEvent = new HUDOverlayEvent.HealthRestored(modifiedHealth, heldItem, modifiedFoodValues, left, top, guiGraphics);
+				healthRenderEvent = new HUDOverlayEvent.HealthRestored(modifiedHealth, result.itemStack, result.modifiedFoodProperties, left, top - healthIconsOffset, guiGraphics);
 
 			// notify everyone that we should render estimated health hud
 			if (healthRenderEvent != null)
 				NeoForge.EVENT_BUS.post(healthRenderEvent);
 
 			if (healthRenderEvent != null && !healthRenderEvent.isCanceled())
-				drawHealthOverlay(healthRenderEvent, mc, flashAlpha);
+				drawHealthOverlay(healthRenderEvent, player, flashAlpha);
 		}
-		else if (type == RenderOverlayType.FOOD)
+
+		@Override
+		public boolean shouldRenderOverlay(Player player, Minecraft mc, GuiGraphics guiGraphics)
 		{
-			if (!ModConfig.SHOW_FOOD_VALUES_OVERLAY.get())
+			// hide when is mounted.
+			if (player.getVehicle() instanceof LivingEntity)
+				return false;
+
+			// Offsets size is set to zero intentionally to disable rendering when health is infinite.
+			if (healthBarOffsets.isEmpty())
+				return false;
+
+			return ModConfig.SHOW_FOOD_HEALTH_HUD_OVERLAY.get();
+		}
+	}
+
+	public static class HungerOverlayPre extends Overlay
+	{
+		public static final ResourceLocation ID = new ResourceLocation(ModInfo.MODID, "hunger_setup");
+
+		@Override
+		public void render(Player player, GuiGraphics guiGraphics, int left, int right, int top, int guiTicks)
+		{
+			foodIconsOffset = Minecraft.getInstance().gui.rightHeight;
+			generateHungerBarOffsets(top - foodIconsOffset, left, right, guiTicks, player);
+		}
+	}
+
+	public static class HungerOverlay extends Overlay
+	{
+		public static final ResourceLocation ID = new ResourceLocation(ModInfo.MODID, "hunger_restored");
+
+		@Override
+		public void render(Player player, GuiGraphics guiGraphics, int left, int right, int top, int guiTicks)
+		{
+			FoodData stats = player.getFoodData();
+			FoodHelper.QueriedFoodResult result = queryRenderHeldFood(player);
+			if (result == null)
+			{
+				resetFlash();
 				return;
+			}
+
+			ItemStack heldItem = result.itemStack;
+			FoodProperties modifiedFoodProperties = result.modifiedFoodProperties;
 
 			// notify everyone that we should render hunger hud overlay
-			HUDOverlayEvent.HungerRestored renderRenderEvent = new HUDOverlayEvent.HungerRestored(stats.getFoodLevel(), heldItem, modifiedFoodValues, right, top, guiGraphics);
+			HUDOverlayEvent.HungerRestored renderRenderEvent = new HUDOverlayEvent.HungerRestored(stats.getFoodLevel(), heldItem, modifiedFoodProperties, right, top - foodIconsOffset, guiGraphics);
 			NeoForge.EVENT_BUS.post(renderRenderEvent);
 			if (renderRenderEvent.isCanceled())
 				return;
 
 			// calculate the final hunger and saturation
-			int foodHunger = modifiedFoodValues.hunger;
-			float foodSaturationIncrement = modifiedFoodValues.getSaturationIncrement();
+			int foodHunger = modifiedFoodProperties.nutrition();
+			float foodSaturationIncrement = modifiedFoodProperties.saturation();
 
 			// restored hunger/saturation overlay while holding food
-			drawHungerOverlay(renderRenderEvent, mc, foodHunger, flashAlpha, FoodHelper.isRotten(heldItem, player));
+			drawHungerOverlay(renderRenderEvent, player, foodHunger, flashAlpha, FoodHelper.isRotten(modifiedFoodProperties));
+		}
 
-			// The render saturation overlay event maybe cancelled by other mods
-			assert saturationRenderEvent != null;
-			if (!saturationRenderEvent.isCanceled())
-			{
-				int newFoodValue = stats.getFoodLevel() + foodHunger;
-				float newSaturationValue = stats.getSaturationLevel() + foodSaturationIncrement;
-				float saturationGained = newSaturationValue > newFoodValue ? newFoodValue - stats.getSaturationLevel() : foodSaturationIncrement;
-				// Redraw saturation overlay for gained
-				drawSaturationOverlay(saturationRenderEvent, mc, saturationGained, flashAlpha);
-			}
+		@Override
+		public boolean shouldRenderOverlay(Player player, Minecraft mc, GuiGraphics guiGraphics)
+		{
+			return ModConfig.SHOW_FOOD_VALUES_OVERLAY.get();
 		}
 	}
 
-	public static void drawSaturationOverlay(float saturationGained, float saturationLevel, Minecraft mc, GuiGraphics guiGraphics, int right, int top, float alpha)
+	public static class SaturationOverlay extends Overlay
+	{
+		public static final ResourceLocation ID = new ResourceLocation(ModInfo.MODID, "saturation_level");
+
+		@Override
+		public void render(Player player, GuiGraphics guiGraphics, int left, int right, int top, int guiTicks)
+		{
+			FoodData stats = player.getFoodData();
+			HUDOverlayEvent.Saturation saturationRenderEvent = new HUDOverlayEvent.Saturation(stats.getSaturationLevel(), right, top - foodIconsOffset, guiGraphics);
+
+			// notify everyone that we should render saturation hud overlay
+			if (!saturationRenderEvent.isCanceled())
+				NeoForge.EVENT_BUS.post(saturationRenderEvent);
+
+			// the render saturation event maybe cancelled by other mods
+			if (saturationRenderEvent.isCanceled())
+				return;
+
+			drawSaturationOverlay(saturationRenderEvent, player, 0, 1f);
+			FoodHelper.QueriedFoodResult result = queryRenderHeldFood(player);
+			if (result == null)
+				return;
+
+			// calculate the final hunger and saturation
+			FoodProperties modifiedFoodProperties = result.modifiedFoodProperties;
+			int foodHunger = modifiedFoodProperties.nutrition();
+			float foodSaturationIncrement = modifiedFoodProperties.saturation();
+
+			int newFoodValue = stats.getFoodLevel() + foodHunger;
+			float newSaturationValue = stats.getSaturationLevel() + foodSaturationIncrement;
+			float saturationGained = newSaturationValue > newFoodValue ? newFoodValue - stats.getSaturationLevel() : foodSaturationIncrement;
+			// Redraw saturation overlay for gained
+			drawSaturationOverlay(saturationRenderEvent, player, saturationGained, flashAlpha);
+		}
+
+		@Override
+		public boolean shouldRenderOverlay(Player player, Minecraft mc, GuiGraphics guiGraphics) {
+			return ModConfig.SHOW_SATURATION_OVERLAY.get();
+		}
+	}
+
+	public static class ExhaustionOverlay extends Overlay
+	{
+		public static final ResourceLocation ID = new ResourceLocation(ModInfo.MODID, "exhaustion_level");
+
+		@Override
+		public void render(Player player, GuiGraphics guiGraphics, int left, int right, int top, int guiTicks)
+		{
+			float exhaustion = player.getFoodData().getExhaustionLevel();
+
+			// Notify everyone that we should render exhaustion hud overlay
+			HUDOverlayEvent.Exhaustion renderEvent = new HUDOverlayEvent.Exhaustion(exhaustion, right, top - foodIconsOffset, guiGraphics);
+			NeoForge.EVENT_BUS.post(renderEvent);
+			if (!renderEvent.isCanceled())
+				drawExhaustionOverlay(renderEvent, player, 1f);
+		}
+
+		@Override
+		public boolean shouldRenderOverlay(Player player, Minecraft mc, GuiGraphics guiGraphics)
+		{
+			// hide when is mounted.
+			if (player.getVehicle() instanceof LivingEntity)
+				return false;
+
+			return ModConfig.SHOW_FOOD_EXHAUSTION_UNDERLAY.get();
+		}
+	}
+
+	public static void drawSaturationOverlay(float saturationGained, float saturationLevel, Player player, GuiGraphics guiGraphics, int right, int top, float alpha)
 	{
 		if (saturationLevel + saturationGained < 0)
 			return;
@@ -247,8 +283,7 @@ public class HUDOverlayHandler
 
 		int iconSize = 9;
 
-		for (int i = startSaturationBar; i < endSaturationBar; ++i)
-		{
+		for (int i = startSaturationBar; i < endSaturationBar; ++i) {
 			// gets the offset that needs to be render of icon
 			IntPoint offset = foodBarOffsets.get(i);
 			if (offset == null)
@@ -275,7 +310,7 @@ public class HUDOverlayHandler
 		disableAlpha(alpha);
 	}
 
-	public static void drawHungerOverlay(int hungerRestored, int foodLevel, Minecraft mc, GuiGraphics guiGraphics, int right, int top, float alpha, boolean useRottenTextures)
+	public static void drawHungerOverlay(int hungerRestored, int foodLevel, Player player, GuiGraphics guiGraphics, int right, int top, float alpha, boolean useRottenTextures)
 	{
 		if (hungerRestored <= 0)
 			return;
@@ -316,7 +351,7 @@ public class HUDOverlayHandler
 		disableAlpha(alpha);
 	}
 
-	public static void drawHealthOverlay(float health, float modifiedHealth, Minecraft mc, GuiGraphics guiGraphics, int right, int top, float alpha)
+	public static void drawHealthOverlay(float health, float modifiedHealth, Player player, GuiGraphics guiGraphics, int right, int top, float alpha)
 	{
 		if (modifiedHealth <= health)
 			return;
@@ -324,7 +359,7 @@ public class HUDOverlayHandler
 		enableAlpha(alpha);
 
 		int fixedModifiedHealth = (int) Math.ceil(modifiedHealth);
-		boolean isHardcore = mc.player.level() != null && mc.player.level().getLevelData().isHardcore();
+		boolean isHardcore = player.level().getLevelData().isHardcore();
 
 		int startHealthBars = (int) Math.max(0, (Math.ceil(health) / 2.0F));
 		int endHealthBars = (int) Math.max(0, Math.ceil(modifiedHealth / 2.0F));
@@ -332,8 +367,7 @@ public class HUDOverlayHandler
 		int iconStartOffset = 16;
 		int iconSize = 9;
 
-		for (int i = startHealthBars; i < endHealthBars; ++i)
-		{
+		for (int i = startHealthBars; i < endHealthBars; ++i) {
 			// gets the offset that needs to be render of icon
 			IntPoint offset = healthBarOffsets.get(i);
 			if (offset == null)
@@ -358,9 +392,9 @@ public class HUDOverlayHandler
 		disableAlpha(alpha);
 	}
 
-	public static void drawExhaustionOverlay(float exhaustion, Minecraft mc, GuiGraphics guiGraphics, int right, int top, float alpha)
+	public static void drawExhaustionOverlay(float exhaustion, Player player, GuiGraphics guiGraphics, int right, int top, float alpha)
 	{
-		float maxExhaustion = HungerHelper.getMaxExhaustion(mc.player);
+		float maxExhaustion = HungerHelper.getMaxExhaustion(player);
 		// clamp between 0 and 1
 		float ratio = Math.min(1, Math.max(0, exhaustion / maxExhaustion));
 		int width = (int) (ratio * 81);
@@ -385,8 +419,7 @@ public class HUDOverlayHandler
 		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 	}
 
-	@SubscribeEvent
-	public void onClientTick(TickEvent.ClientTickEvent event)
+	public static void onClientTick(TickEvent.ClientTickEvent event)
 	{
 		if (event.phase != TickEvent.Phase.END)
 			return;
@@ -409,39 +442,32 @@ public class HUDOverlayHandler
 		alphaDir = 1;
 	}
 
-	private static void drawSaturationOverlay(HUDOverlayEvent.Saturation event, Minecraft mc, float saturationGained, float alpha)
+	private static void drawSaturationOverlay(HUDOverlayEvent.Saturation event, Player player, float saturationGained, float alpha)
 	{
-		drawSaturationOverlay(saturationGained, event.saturationLevel, mc, event.guiGraphics, event.x, event.y, alpha);
+		drawSaturationOverlay(saturationGained, event.saturationLevel, player, event.guiGraphics, event.x, event.y, alpha);
 	}
 
-	private static void drawHungerOverlay(HUDOverlayEvent.HungerRestored event, Minecraft mc, int hunger, float alpha, boolean useRottenTextures)
+	private static void drawHungerOverlay(HUDOverlayEvent.HungerRestored event, Player player, int hunger, float alpha, boolean useRottenTextures)
 	{
-		drawHungerOverlay(hunger, event.currentFoodLevel, mc, event.guiGraphics, event.x, event.y, alpha, useRottenTextures);
+		drawHungerOverlay(hunger, event.currentFoodLevel, player, event.guiGraphics, event.x, event.y, alpha, useRottenTextures);
 	}
 
-	private static void drawHealthOverlay(HUDOverlayEvent.HealthRestored event, Minecraft mc, float alpha)
+	private static void drawHealthOverlay(HUDOverlayEvent.HealthRestored event, Player player, float alpha)
 	{
-		drawHealthOverlay(mc.player.getHealth(), event.modifiedHealth, mc, event.guiGraphics, event.x, event.y, alpha);
+		drawHealthOverlay(player.getHealth(), event.modifiedHealth, player, event.guiGraphics, event.x, event.y, alpha);
 	}
 
-	private static void drawExhaustionOverlay(HUDOverlayEvent.Exhaustion event, Minecraft mc, float alpha)
+	private static void drawExhaustionOverlay(HUDOverlayEvent.Exhaustion event, Player player, float alpha)
 	{
-		drawExhaustionOverlay(event.exhaustion, mc, event.guiGraphics, event.x, event.y, alpha);
+		drawExhaustionOverlay(event.exhaustion, player, event.guiGraphics, event.x, event.y, alpha);
 	}
 
-	private static boolean shouldRenderAnyOverlays()
-	{
-		return ModConfig.SHOW_FOOD_VALUES_OVERLAY.get() || ModConfig.SHOW_SATURATION_OVERLAY.get() || ModConfig.SHOW_FOOD_HEALTH_HUD_OVERLAY.get();
-	}
-
-	private static boolean shouldShowEstimatedHealth(ItemStack hoveredStack, FoodValues modifiedFoodValues)
+	private static boolean shouldShowEstimatedHealth(Player player)
 	{
 		// then configuration cancel the render event
 		if (!ModConfig.SHOW_FOOD_HEALTH_HUD_OVERLAY.get())
 			return false;
 
-		Minecraft mc = Minecraft.getInstance();
-		Player player = mc.player;
 		FoodData stats = player.getFoodData();
 
 		// in the `PEACEFUL` mode, health will restore faster
@@ -568,5 +594,25 @@ public class HUDOverlayHandler
 			point.x = x - right;
 			point.y = y - top;
 		}
+	}
+
+
+	public static FoodHelper.QueriedFoodResult queryRenderHeldFood(Player player)
+	{
+		// try to get the item stack in the player hand
+		ItemStack heldItem = player.getMainHandItem();
+		FoodHelper.QueriedFoodResult heldFood = FoodHelper.query(heldItem, player);
+		boolean canConsume = heldFood != null && FoodHelper.canConsume(player, heldFood.modifiedFoodProperties);
+		if (ModConfig.SHOW_FOOD_VALUES_OVERLAY_WHEN_OFFHAND.get() && !canConsume)
+		{
+			heldItem = player.getOffhandItem();
+			heldFood = FoodHelper.query(heldItem, player);
+			canConsume = heldFood != null && FoodHelper.canConsume(player, heldFood.modifiedFoodProperties);
+		}
+		boolean shouldRenderHeldItemValues = !heldItem.isEmpty() && canConsume;
+		if (!shouldRenderHeldItemValues)
+			return null;
+
+		return heldFood;
 	}
 }

@@ -1,36 +1,33 @@
 package squeek.appleskin.network;
 
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.network.handling.PlayPayloadContext;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import squeek.appleskin.ModInfo;
 
 public record MessageSaturationSync(float saturationLevel) implements CustomPacketPayload
 {
-	public static final ResourceLocation ID = new ResourceLocation(ModInfo.MODID, "saturation");
+	public static final Type<MessageSaturationSync> TYPE = new Type<>(new ResourceLocation(ModInfo.MODID, "saturation"));
+	public static final StreamCodec<RegistryFriendlyByteBuf, MessageSaturationSync> CODEC = StreamCodec.composite(
+			ByteBufCodecs.FLOAT,
+			MessageSaturationSync::saturationLevel,
+			MessageSaturationSync::new
+	);
 
-	public MessageSaturationSync(final FriendlyByteBuf buffer)
-	{
-		this(buffer.readFloat());
-	}
-
-	@Override
-	public void write(final FriendlyByteBuf buffer)
-	{
-		buffer.writeFloat(saturationLevel());
-	}
 
 	@Override
-	public ResourceLocation id()
+	public Type<? extends CustomPacketPayload> type()
 	{
-		return ID;
+		return TYPE;
 	}
 
-	public static void handle(final MessageSaturationSync message, final PlayPayloadContext ctx)
+	public static void handle(final MessageSaturationSync message, final IPayloadContext ctx)
 	{
-		ctx.workHandler().submitAsync(() -> {
-			ctx.player().ifPresent(player -> player.getFoodData().setSaturation(message.saturationLevel()));
+		ctx.enqueueWork(() -> {
+			ctx.player().getFoodData().setSaturation(message.saturationLevel());
 		});
 	}
 }
