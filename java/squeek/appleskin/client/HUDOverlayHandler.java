@@ -101,10 +101,6 @@ public class HUDOverlayHandler
 		@Override
 		public void render(Minecraft mc, Player player, GuiGraphics guiGraphics, int left, int right, int top, int guiTicks)
 		{
-			// draw health overlay if needed
-			if (!shouldShowEstimatedHealth(player))
-				return;
-
 			FoodHelper.QueriedFoodResult result = heldFood.result(guiTicks, player);
 			if (result == null)
 			{
@@ -143,7 +139,7 @@ public class HUDOverlayHandler
 			if (barOffsets.healthBarOffsets(guiTicks, player).isEmpty())
 				return false;
 
-			return ModConfig.SHOW_FOOD_HEALTH_HUD_OVERLAY.get();
+			return shouldShowEstimatedHealth(player);
 		}
 	}
 
@@ -225,7 +221,8 @@ public class HUDOverlayHandler
 		}
 
 		@Override
-		public boolean shouldRenderOverlay(Minecraft mc, Player player, GuiGraphics guiGraphics, int guiTicks) {
+		public boolean shouldRenderOverlay(Minecraft mc, Player player, GuiGraphics guiGraphics, int guiTicks)
+		{
 			if (!super.shouldRenderOverlay(mc, player, guiGraphics, guiTicks))
 				return false;
 
@@ -500,7 +497,7 @@ public class HUDOverlayHandler
 		protected void generate(int guiTicks, Player player)
 		{
 			// Note: Both health and food offsets are generated together
-			// because the PRNG used for the health icon offsets affect
+			// because the PRNG used for the health icon offsets affects
 			// the PRNG of the food icon offsets. By generating the offsets
 			// together, we can match the PRNG of the Vanilla HUD.
 
