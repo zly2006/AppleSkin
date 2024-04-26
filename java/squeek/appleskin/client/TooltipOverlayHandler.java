@@ -3,18 +3,16 @@ package squeek.appleskin.client;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.component.type.FoodComponent;
-import net.minecraft.item.Item;
-import net.minecraft.text.TextVisitFactory;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
 import net.minecraft.client.item.TooltipData;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.component.type.FoodComponent;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.*;
 import net.minecraft.util.Identifier;
 import squeek.appleskin.ModConfig;
-import squeek.appleskin.api.event.FoodValuesEvent;
 import squeek.appleskin.api.event.TooltipOverlayEvent;
 import squeek.appleskin.helpers.FoodHelper;
 import squeek.appleskin.helpers.KeyHelper;
@@ -271,7 +269,8 @@ public class TooltipOverlayHandler
 			context.drawGuiTexture(TextureHelper.FOOD_EMPTY_TEXTURE, x, y, 9, 9);
 
 			FoodOutline outline = FoodOutline.get(modifiedFoodHunger, defaultFoodHunger, i);
-			if (outline != FoodOutline.NORMAL) {
+			if (outline != FoodOutline.NORMAL)
+			{
 				outline.setShaderColor(context);
 				context.drawGuiTexture(TextureHelper.HUNGER_OUTLINE_SPRITE, x, y, 9, 9);
 			}

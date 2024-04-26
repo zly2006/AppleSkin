@@ -433,7 +433,8 @@ public class HUDOverlayHandler
 			// for thousands of hearts.
 			// Note: Infinite and > INT_MAX absorption has been seen in the wild.
 			// This will effectively disable rendering whenever health is unexpectedly large.
-			if (healthBars < 0 || healthBars > 1000) {
+			if (healthBars < 0 || healthBars > 1000)
+			{
 				healthBars = 0;
 			}
 

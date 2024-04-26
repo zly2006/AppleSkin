@@ -51,7 +51,8 @@ public class FoodHelper
 	}
 
 	@Nullable
-	public static QueriedFoodResult query(ItemStack itemStack, PlayerEntity player) {
+	public static QueriedFoodResult query(ItemStack itemStack, PlayerEntity player)
+	{
 		if (!isFood(itemStack)) return null;
 
 		FoodComponent defaultFood = FoodHelper.getDefaultFoodValues(itemStack);
@@ -160,7 +161,7 @@ public class FoodHelper
 				// be very large).
 				float limitedSaturationLevel = Math.min(saturationLevel, REGEN_EXHAUSTION_INCREMENT);
 				float exhaustionUntilAboveMax = Math.nextUp(MAX_EXHAUSTION) - exhaustionLevel;
-				int numIterationsUntilAboveMax = Math.max(1, (int)Math.ceil(exhaustionUntilAboveMax / limitedSaturationLevel));
+				int numIterationsUntilAboveMax = Math.max(1, (int) Math.ceil(exhaustionUntilAboveMax / limitedSaturationLevel));
 
 				health += (limitedSaturationLevel / REGEN_EXHAUSTION_INCREMENT) * numIterationsUntilAboveMax;
 				exhaustionLevel += limitedSaturationLevel * numIterationsUntilAboveMax;

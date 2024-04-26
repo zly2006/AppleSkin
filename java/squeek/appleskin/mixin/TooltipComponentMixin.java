@@ -38,7 +38,7 @@ public interface TooltipComponentMixin extends TooltipComponent
 	{
 		if (data instanceof TooltipOverlayHandler.FoodOverlay)
 		{
-			info.setReturnValue((TooltipOverlayHandler.FoodOverlay)data);
+			info.setReturnValue((TooltipOverlayHandler.FoodOverlay) data);
 		}
 	}
 }
