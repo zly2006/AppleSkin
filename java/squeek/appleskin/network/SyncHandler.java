@@ -3,8 +3,8 @@ package squeek.appleskin.network;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.living.LivingEvent.LivingTickEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -38,7 +38,7 @@ public class SyncHandler
 	private static final Map<UUID, Float> lastExhaustionLevels = new HashMap<>();
 
 	@SubscribeEvent
-	public void onLivingTickEvent(LivingTickEvent event)
+	public void onLivingTickEvent(EntityTickEvent.Pre event)
 	{
 		if (!(event.getEntity() instanceof ServerPlayer))
 			return;

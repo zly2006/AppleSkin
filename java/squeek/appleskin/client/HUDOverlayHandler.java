@@ -15,10 +15,10 @@ import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.TickEvent;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 import squeek.appleskin.ModConfig;
@@ -419,11 +419,8 @@ public class HUDOverlayHandler
 		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 	}
 
-	public static void onClientTick(TickEvent.ClientTickEvent event)
+	public static void onClientTick(ClientTickEvent.Post event)
 	{
-		if (event.phase != TickEvent.Phase.END)
-			return;
-
 		unclampedFlashAlpha += alphaDir * 0.125f;
 		if (unclampedFlashAlpha >= 1.5f)
 		{
