@@ -180,7 +180,16 @@ public class TooltipOverlayHandler
 		FoodOverlay foodOverlay = new FoodOverlay(prerenderEvent.itemStack, defaultFood, modifiedFood, player);
 		if (foodOverlay.shouldRenderHungerBars())
 		{
-			tooltip.add(new FoodOverlayTextComponent(foodOverlay));
+			try
+			{
+				tooltip.add(new FoodOverlayTextComponent(foodOverlay));
+			}
+			catch (UnsupportedOperationException ignored)
+			{
+				// The list is immutable, e.g. the item has the HIDE_TOOLTIP component
+				// Instead of checking for that component, though, we catch this exception
+				// just in case there are other reasons the list could be immutable.
+			}
 		}
 	}
 
