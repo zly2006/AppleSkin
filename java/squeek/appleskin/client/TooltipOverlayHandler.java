@@ -8,6 +8,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodProperties;
@@ -310,6 +311,12 @@ public class TooltipOverlayHandler
 	private static boolean shouldShowTooltip(ItemStack hoveredStack, Player player)
 	{
 		if (hoveredStack.isEmpty())
+			return false;
+
+		// Note: The intention here is to match the conditional in ItemStack.getTooltipLines, but
+		//       the NeoForge event does not provide TooltipFlags so this does not match exactly.
+		// TODO: (!tooltipFlags.isCreative() && ...) if NeoForge starts providing TooltipFlags
+		if (hoveredStack.has(DataComponents.HIDE_TOOLTIP))
 			return false;
 
 		boolean shouldShowTooltip = (ModConfig.SHOW_FOOD_VALUES_IN_TOOLTIP.get() && KeyHelper.isShiftKeyDown()) || ModConfig.ALWAYS_SHOW_FOOD_VALUES_TOOLTIP.get();
