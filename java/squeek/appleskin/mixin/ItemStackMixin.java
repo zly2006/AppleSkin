@@ -19,6 +19,6 @@ public class ItemStackMixin
 	private void getTooltipFromItem(Item.TooltipContext context, PlayerEntity player, TooltipType type, CallbackInfoReturnable<List> info)
 	{
 		if (TooltipOverlayHandler.INSTANCE != null)
-			TooltipOverlayHandler.INSTANCE.onItemTooltip((ItemStack) (Object) this, player, context, info.getReturnValue());
+			TooltipOverlayHandler.INSTANCE.onItemTooltip((ItemStack) (Object) this, player, context, type, info.getReturnValue());
 	}
 }

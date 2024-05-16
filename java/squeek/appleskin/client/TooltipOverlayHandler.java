@@ -5,7 +5,9 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
 import net.minecraft.client.item.TooltipData;
+import net.minecraft.client.item.TooltipType;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.FoodComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
@@ -154,14 +156,14 @@ public class TooltipOverlayHandler
 		INSTANCE = new TooltipOverlayHandler();
 	}
 
-	public void onItemTooltip(ItemStack hoveredStack, PlayerEntity player, Item.TooltipContext context, List tooltip)
+	public void onItemTooltip(ItemStack hoveredStack, PlayerEntity player, Item.TooltipContext context, TooltipType type, List tooltip)
 	{
 		// When hoveredStack or tooltip is null an unknown exception occurs.
 		// If ModConfig.INSTANCE is null then we're probably still in the init phase
 		if (hoveredStack == null || tooltip == null || ModConfig.INSTANCE == null)
 			return;
 
-		if (!shouldShowTooltip(hoveredStack))
+		if (!shouldShowTooltip(hoveredStack, type))
 			return;
 
 		FoodHelper.QueriedFoodResult queriedFoodResult = FoodHelper.query(hoveredStack, player);
@@ -186,8 +188,8 @@ public class TooltipOverlayHandler
 			}
 			catch (UnsupportedOperationException ignored)
 			{
-				// The list is immutable, e.g. the item has the HIDE_TOOLTIP component
-				// Instead of checking for that component, though, we catch this exception
+				// The list is immutable, e.g. the item has the HIDE_TOOLTIP component.
+				// In addition to checking for that component, we catch this exception
 				// just in case there are other reasons the list could be immutable.
 			}
 		}
@@ -351,9 +353,15 @@ public class TooltipOverlayHandler
 		RenderSystem.disableDepthTest();
 	}
 
-	private boolean shouldShowTooltip(ItemStack hoveredStack)
+	private boolean shouldShowTooltip(ItemStack hoveredStack, TooltipType type)
 	{
 		if (hoveredStack.isEmpty())
+		{
+			return false;
+		}
+
+		// Note: The intention here is to match the logic in ItemStack.getTooltip
+		if (!type.isCreative() && hoveredStack.contains(DataComponentTypes.HIDE_TOOLTIP))
 		{
 			return false;
 		}
