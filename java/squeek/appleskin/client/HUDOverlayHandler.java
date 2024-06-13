@@ -1,6 +1,7 @@
 package squeek.appleskin.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.LayeredDraw;
@@ -51,13 +52,13 @@ public class HUDOverlayHandler
 		// before they get modified during the rendering of the health/food HUD
 		event.registerBelow(
 			VanillaGuiLayers.PLAYER_HEALTH,
-			new ResourceLocation(ModInfo.MODID, "health_offset"),
-			(guiGraphics, partialTicks) -> healthIconsOffset = Minecraft.getInstance().gui.leftHeight
+			ResourceLocation.fromNamespaceAndPath(ModInfo.MODID, "health_offset"),
+			(guiGraphics, deltaTracker) -> healthIconsOffset = Minecraft.getInstance().gui.leftHeight
 		);
 		event.registerBelow(
 			VanillaGuiLayers.FOOD_LEVEL,
-			new ResourceLocation(ModInfo.MODID, "food_offset"),
-			(guiGraphics, partialTicks) -> foodIconsOffset = Minecraft.getInstance().gui.rightHeight
+			ResourceLocation.fromNamespaceAndPath(ModInfo.MODID, "food_offset"),
+			(guiGraphics, deltaTracker) -> foodIconsOffset = Minecraft.getInstance().gui.rightHeight
 		);
 
 		// register overlays/underlays.
@@ -75,7 +76,7 @@ public class HUDOverlayHandler
 		public abstract void render(Minecraft mc, Player player, GuiGraphics guiGraphics, int left, int right, int top, int guiTicks);
 
 		@Override
-		public final void render(GuiGraphics guiGraphics, float partialTicks)
+		public final void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker)
 		{
 			Minecraft mc = Minecraft.getInstance();
 			if (mc.player == null || !shouldRenderOverlay(mc, mc.player, guiGraphics, mc.gui.getGuiTicks()))
@@ -97,7 +98,7 @@ public class HUDOverlayHandler
 	// TODO: missing healthBlinkTime, see net.minecraft.client.gui.Gui#renderHealthLevel
 	public static class HealthOverlay extends Overlay
 	{
-		public static final ResourceLocation ID = new ResourceLocation(ModInfo.MODID, "health_restored");
+		public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(ModInfo.MODID, "health_restored");
 
 		@Override
 		public void render(Minecraft mc, Player player, GuiGraphics guiGraphics, int left, int right, int top, int guiTicks)
@@ -146,7 +147,7 @@ public class HUDOverlayHandler
 
 	public static class HungerOverlay extends Overlay
 	{
-		public static final ResourceLocation ID = new ResourceLocation(ModInfo.MODID, "hunger_restored");
+		public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(ModInfo.MODID, "hunger_restored");
 
 		@Override
 		public void render(Minecraft mc, Player player, GuiGraphics guiGraphics, int left, int right, int top, int guiTicks)
@@ -188,7 +189,7 @@ public class HUDOverlayHandler
 
 	public static class SaturationOverlay extends Overlay
 	{
-		public static final ResourceLocation ID = new ResourceLocation(ModInfo.MODID, "saturation_level");
+		public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(ModInfo.MODID, "saturation_level");
 
 		@Override
 		public void render(Minecraft mc, Player player, GuiGraphics guiGraphics, int left, int right, int top, int guiTicks)
@@ -233,7 +234,7 @@ public class HUDOverlayHandler
 
 	public static class ExhaustionOverlay extends Overlay
 	{
-		public static final ResourceLocation ID = new ResourceLocation(ModInfo.MODID, "exhaustion_level");
+		public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(ModInfo.MODID, "exhaustion_level");
 
 		@Override
 		public void render(Minecraft mc, Player player, GuiGraphics guiGraphics, int left, int right, int top, int guiTicks)

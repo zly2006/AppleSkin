@@ -10,7 +10,7 @@ import squeek.appleskin.ModInfo;
 
 public record MessageExhaustionSync(float exhaustionLevel) implements CustomPacketPayload
 {
-	public static final Type<MessageExhaustionSync> TYPE = new Type<>(new ResourceLocation(ModInfo.MODID, "exhaustion"));
+	public static final Type<MessageExhaustionSync> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(ModInfo.MODID, "exhaustion"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, MessageExhaustionSync> CODEC = StreamCodec.composite(
 		ByteBufCodecs.FLOAT,
 		MessageExhaustionSync::exhaustionLevel,

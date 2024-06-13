@@ -10,7 +10,7 @@ import squeek.appleskin.ModInfo;
 
 public record MessageSaturationSync(float saturationLevel) implements CustomPacketPayload
 {
-	public static final Type<MessageSaturationSync> TYPE = new Type<>(new ResourceLocation(ModInfo.MODID, "saturation"));
+	public static final Type<MessageSaturationSync> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(ModInfo.MODID, "saturation"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, MessageSaturationSync> CODEC = StreamCodec.composite(
 		ByteBufCodecs.FLOAT,
 		MessageSaturationSync::saturationLevel,

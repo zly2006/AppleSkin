@@ -4,16 +4,16 @@ import net.minecraft.resources.ResourceLocation;
 
 public class TextureHelper
 {
-	public static final ResourceLocation MOD_ICONS = new ResourceLocation("appleskin", "textures/icons.png");
-	public static final ResourceLocation HUNGER_OUTLINE_SPRITE = new ResourceLocation("appleskin", "tooltip_hunger_outline");
+	public static final ResourceLocation MOD_ICONS = ResourceLocation.fromNamespaceAndPath("appleskin", "textures/icons.png");
+	public static final ResourceLocation HUNGER_OUTLINE_SPRITE = ResourceLocation.fromNamespaceAndPath("appleskin", "tooltip_hunger_outline");
 
 	// Hunger
-	public static final ResourceLocation FOOD_EMPTY_HUNGER_TEXTURE = new ResourceLocation("hud/food_empty_hunger");
-	public static final ResourceLocation FOOD_HALF_HUNGER_TEXTURE = new ResourceLocation("hud/food_half_hunger");
-	public static final ResourceLocation FOOD_FULL_HUNGER_TEXTURE = new ResourceLocation("hud/food_full_hunger");
-	public static final ResourceLocation FOOD_EMPTY_TEXTURE = new ResourceLocation("hud/food_empty");
-	public static final ResourceLocation FOOD_HALF_TEXTURE = new ResourceLocation("hud/food_half");
-	public static final ResourceLocation FOOD_FULL_TEXTURE = new ResourceLocation("hud/food_full");
+	public static final ResourceLocation FOOD_EMPTY_HUNGER_TEXTURE = ResourceLocation.withDefaultNamespace("hud/food_empty_hunger");
+	public static final ResourceLocation FOOD_HALF_HUNGER_TEXTURE = ResourceLocation.withDefaultNamespace("hud/food_half_hunger");
+	public static final ResourceLocation FOOD_FULL_HUNGER_TEXTURE = ResourceLocation.withDefaultNamespace("hud/food_full_hunger");
+	public static final ResourceLocation FOOD_EMPTY_TEXTURE = ResourceLocation.withDefaultNamespace("hud/food_empty");
+	public static final ResourceLocation FOOD_HALF_TEXTURE = ResourceLocation.withDefaultNamespace("hud/food_half");
+	public static final ResourceLocation FOOD_FULL_TEXTURE = ResourceLocation.withDefaultNamespace("hud/food_full");
 
 	public enum FoodType
 	{
@@ -33,12 +33,12 @@ public class TextureHelper
 	}
 
 	// Hearts
-	public static final ResourceLocation HEART_CONTAINER = new ResourceLocation("hud/heart/container");
-	public static final ResourceLocation HEART_HARDCORE_CONTAINER = new ResourceLocation("hud/heart/container_hardcore");
-	public static final ResourceLocation HEART_FULL = new ResourceLocation("hud/heart/full");
-	public static final ResourceLocation HEART_HARDCORE_FULL = new ResourceLocation("hud/heart/hardcore_full");
-	public static final ResourceLocation HEART_HALF = new ResourceLocation("hud/heart/half");
-	public static final ResourceLocation HEART_HARDCORE_HALF = new ResourceLocation("hud/heart/hardcore_half");
+	public static final ResourceLocation HEART_CONTAINER = ResourceLocation.withDefaultNamespace("hud/heart/container");
+	public static final ResourceLocation HEART_HARDCORE_CONTAINER = ResourceLocation.withDefaultNamespace("hud/heart/container_hardcore");
+	public static final ResourceLocation HEART_FULL = ResourceLocation.withDefaultNamespace("hud/heart/full");
+	public static final ResourceLocation HEART_HARDCORE_FULL = ResourceLocation.withDefaultNamespace("hud/heart/hardcore_full");
+	public static final ResourceLocation HEART_HALF = ResourceLocation.withDefaultNamespace("hud/heart/half");
+	public static final ResourceLocation HEART_HARDCORE_HALF = ResourceLocation.withDefaultNamespace("hud/heart/hardcore_half");
 
 	public enum HeartType
 	{
