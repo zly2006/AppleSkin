@@ -91,7 +91,7 @@ public class HUDOverlayHandler
 
 		public boolean shouldRenderOverlay(Minecraft mc, Player player, GuiGraphics guiGraphics, int guiTicks)
 		{
-			return mc.gameMode != null && mc.gameMode.canHurtPlayer();
+			return !mc.options.hideGui && mc.gameMode != null && mc.gameMode.canHurtPlayer();
 		}
 	}
 
