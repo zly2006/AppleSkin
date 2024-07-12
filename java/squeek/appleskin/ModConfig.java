@@ -1,25 +1,9 @@
 package squeek.appleskin;
 
-import com.electronwill.nightconfig.core.file.CommentedFileConfig;
-import com.electronwill.nightconfig.core.io.WritingMode;
 import net.neoforged.neoforge.common.ModConfigSpec;
-
-import java.nio.file.Path;
 
 public class ModConfig
 {
-	public static void init(Path file)
-	{
-		final CommentedFileConfig configData = CommentedFileConfig.builder(file)
-			.sync()
-			.autosave()
-			.writingMode(WritingMode.REPLACE)
-			.build();
-
-		configData.load();
-		SPEC.setConfig(configData);
-	}
-
 	private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
 	/*
