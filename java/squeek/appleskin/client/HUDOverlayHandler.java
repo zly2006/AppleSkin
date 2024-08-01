@@ -283,7 +283,7 @@ public class HUDOverlayHandler
 		for (int i = startSaturationBar; i < endSaturationBar; ++i)
 		{
 			// gets the offset that needs to be render of icon
-			IntPoint offset = offsets.get(i);
+			IntPoint offset = i < offsets.size() ? offsets.get(i) : new IntPoint();
 			if (offset == null)
 				continue;
 
@@ -327,7 +327,7 @@ public class HUDOverlayHandler
 		for (int i = startFoodBars; i < endFoodBars; ++i)
 		{
 			// gets the offset that needs to be render of icon
-			IntPoint offset = offsets.get(i);
+			IntPoint offset = i < offsets.size() ? offsets.get(i) : new IntPoint();
 			if (offset == null)
 				continue;
 
@@ -369,7 +369,7 @@ public class HUDOverlayHandler
 		for (int i = startHealthBars; i < endHealthBars; ++i)
 		{
 			// gets the offset that needs to be render of icon
-			IntPoint offset = offsets.get(i);
+			IntPoint offset = i < offsets.size() ? offsets.get(i) : new IntPoint();
 			if (offset == null)
 				continue;
 
