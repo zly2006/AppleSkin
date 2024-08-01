@@ -1,6 +1,5 @@
 package squeek.appleskin.helpers;
 
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -16,9 +15,9 @@ import squeek.appleskin.api.event.FoodValuesEvent;
 
 public class FoodHelper
 {
-	public static boolean isFood(ItemStack itemStack)
+	public static boolean isFood(ItemStack itemStack, Player player)
 	{
-		return itemStack.has(DataComponents.FOOD);
+		return itemStack.getFoodProperties(player) != null;
 	}
 
 	public static boolean canConsume(Player player, FoodProperties foodProperties)
@@ -33,7 +32,8 @@ public class FoodHelper
 	 */
 	public static FoodProperties getDefaultFoodValues(ItemStack itemStack, Player player)
 	{
-		return itemStack.getOrDefault(DataComponents.FOOD, EMPTY_FOOD_PROPERTIES);
+		var properties = itemStack.getFoodProperties(player);
+		return properties != null ? properties : EMPTY_FOOD_PROPERTIES;
 	}
 
 	public static class QueriedFoodResult
@@ -54,7 +54,7 @@ public class FoodHelper
 	@Nullable
 	public static QueriedFoodResult query(ItemStack itemStack, Player player)
 	{
-		if (!isFood(itemStack))
+		if (!isFood(itemStack, player))
 			return null;
 
 		FoodProperties defaultFood = getDefaultFoodValues(itemStack, player);

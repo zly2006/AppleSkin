@@ -318,7 +318,7 @@ public class TooltipOverlayHandler
 		if (!shouldShowTooltip)
 			return false;
 
-		if (!FoodHelper.isFood(hoveredStack))
+		if (!FoodHelper.isFood(hoveredStack, player))
 			return false;
 
 		return true;
