@@ -292,11 +292,6 @@ public class TooltipOverlayHandler
 		FoodProperties defaultFood = queriedFoodResult.defaultFoodProperties;
 		FoodProperties modifiedFood = queriedFoodResult.modifiedFoodProperties;
 
-		FoodValuesEvent foodValuesEvent = new FoodValuesEvent(mc.player, hoveredStack, defaultFood, modifiedFood);
-		NeoForge.EVENT_BUS.post(foodValuesEvent);
-		defaultFood = foodValuesEvent.defaultFoodProperties;
-		modifiedFood = foodValuesEvent.modifiedFoodProperties;
-
 		// Notify everyone that we should render tooltip overlay
 		TooltipOverlayEvent.Pre prerenderEvent = new TooltipOverlayEvent.Pre(hoveredStack, defaultFood, modifiedFood);
 		NeoForge.EVENT_BUS.post(prerenderEvent);
