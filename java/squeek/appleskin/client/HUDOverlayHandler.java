@@ -4,6 +4,8 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.RenderLayers;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.HungerManager;
 import net.minecraft.entity.player.PlayerEntity;
@@ -51,7 +53,7 @@ public class HUDOverlayHandler
 
 		assert player != null;
 
-		float exhaustion = player.getHungerManager().getExhaustion();
+		float exhaustion = player.getHungerManager().exhaustion;
 
 		// Notify everyone that we should render exhaustion hud overlay
 		HUDOverlayEvent.Exhaustion renderEvent = new HUDOverlayEvent.Exhaustion(exhaustion, right, top, context);
@@ -112,7 +114,7 @@ public class HUDOverlayHandler
 			float foodSaturationIncrement = result.modifiedFoodComponent.saturation();
 
 			// draw hunger overlay
-			drawHungerOverlay(hungerRenderEvent, mc, foodHunger, flashAlpha, FoodHelper.isRotten(result.modifiedFoodComponent), mc.inGameHud.getTicks());
+			drawHungerOverlay(hungerRenderEvent, mc, foodHunger, flashAlpha, false, mc.inGameHud.getTicks());
 
 			int newFoodValue = stats.getFoodLevel() + foodHunger;
 			float newSaturationValue = stats.getSaturationLevel() + foodSaturationIncrement;
@@ -149,7 +151,7 @@ public class HUDOverlayHandler
 		// draw health overlay if needed
 		if (shouldShowEstimatedHealth(player, mc.inGameHud.getTicks()))
 		{
-			float foodHealthIncrement = FoodHelper.getEstimatedHealthIncrement(player, result.modifiedFoodComponent);
+			float foodHealthIncrement = FoodHelper.getEstimatedHealthIncrement(player, result.modifiedFoodComponent, result.consumableComponent);
 			float currentHealth = player.getHealth();
 			float modifiedHealth = Math.min(currentHealth + foodHealthIncrement, player.getMaxHealth());
 
@@ -208,7 +210,7 @@ public class HUDOverlayHandler
 			else if (effectiveSaturationOfBar > .25)
 				u = 1 * iconSize;
 
-			context.drawTexture(TextureHelper.MOD_ICONS, x, y, u, v, iconSize, iconSize);
+			context.drawTexture(RenderLayer::getGuiTextured, TextureHelper.MOD_ICONS, x, y, u, v, iconSize, iconSize, 64, 64);
 		}
 
 		disableAlpha(alpha);
@@ -243,13 +245,13 @@ public class HUDOverlayHandler
 
 			// very faint background
 			RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha * 0.25F);
-			context.drawGuiTexture(backgroundSprite, x, y, iconSize, iconSize);
+			context.drawGuiTexture(RenderLayer::getGuiTextured, backgroundSprite, x, y, iconSize, iconSize);
 			RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha);
 
 			boolean isHalf = i * 2 + 1 == modifiedFood;
 			Identifier iconSprite = TextureHelper.getFoodTexture(useRottenTextures, isHalf ? FoodType.HALF : FoodType.FULL);
 
-			context.drawGuiTexture(iconSprite, x, y, iconSize, iconSize);
+			context.drawGuiTexture(RenderLayer::getGuiTextured, iconSprite, x, y, iconSize, iconSize);
 		}
 
 		disableAlpha(alpha);
@@ -285,13 +287,13 @@ public class HUDOverlayHandler
 
 			// very faint background
 			RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha * 0.25F);
-			context.drawGuiTexture(backgroundSprite, x, y, iconSize, iconSize);
+			context.drawGuiTexture(RenderLayer::getGuiTextured, backgroundSprite, x, y, iconSize, iconSize);
 			RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha);
 
 			boolean isHalf = i * 2 + 1 == fixedModifiedHealth;
 			Identifier iconSprite = TextureHelper.getHeartTexture(isHardcore, isHalf ? HeartType.HALF : HeartType.FULL);
 
-			context.drawGuiTexture(iconSprite, x, y, iconSize, iconSize);
+			context.drawGuiTexture(RenderLayer::getGuiTextured, iconSprite, x, y, iconSize, iconSize);
 		}
 
 		disableAlpha(alpha);
@@ -306,7 +308,7 @@ public class HUDOverlayHandler
 		int height = 9;
 
 		enableAlpha(.75f);
-		context.drawTexture(TextureHelper.MOD_ICONS, right - width, top, 81 - width, 18, width, height);
+		context.drawTexture(RenderLayer::getGuiTextured, TextureHelper.MOD_ICONS, right - width, top, 81 - width, 18, width, height, 64, 64);
 		disableAlpha(.75f);
 	}
 

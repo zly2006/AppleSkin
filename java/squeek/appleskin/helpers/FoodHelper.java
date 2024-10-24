@@ -1,6 +1,7 @@
 package squeek.appleskin.helpers;
 
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.ConsumableComponent;
 import net.minecraft.component.type.FoodComponent;
 import net.minecraft.entity.effect.StatusEffectCategory;
 import net.minecraft.entity.effect.StatusEffectInstance;
@@ -8,6 +9,8 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.HungerManager;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.consume.ApplyEffectsConsumeEffect;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
@@ -39,13 +42,15 @@ public class FoodHelper
 	{
 		public FoodComponent defaultFoodComponent;
 		public FoodComponent modifiedFoodComponent;
+		public ConsumableComponent consumableComponent;
 
 		public final ItemStack itemStack;
 
-		public QueriedFoodResult(FoodComponent defaultFoodComponent, FoodComponent modifiedFoodComponent, ItemStack itemStack)
+		public QueriedFoodResult(FoodComponent defaultFoodComponent, FoodComponent modifiedFoodComponent, ConsumableComponent consumableComponent, ItemStack itemStack)
 		{
 			this.defaultFoodComponent = defaultFoodComponent;
 			this.modifiedFoodComponent = modifiedFoodComponent;
+			this.consumableComponent = consumableComponent;
 			this.itemStack = itemStack;
 		}
 	}
@@ -60,20 +65,25 @@ public class FoodHelper
 		FoodValuesEvent foodValuesEvent = new FoodValuesEvent(player, itemStack, defaultFood, defaultFood);
 		FoodValuesEvent.EVENT.invoker().interact(foodValuesEvent);
 
-		return new QueriedFoodResult(foodValuesEvent.defaultFoodComponent, foodValuesEvent.modifiedFoodComponent, itemStack);
+		// todo: APO change?
+		return new QueriedFoodResult(foodValuesEvent.defaultFoodComponent, foodValuesEvent.modifiedFoodComponent, itemStack.get(DataComponentTypes.CONSUMABLE), itemStack);
 	}
 
-	public static boolean isRotten(FoodComponent foodComponent)
+	public static boolean isRotten(ConsumableComponent foodComponent)
 	{
-		for (FoodComponent.StatusEffectEntry effect : foodComponent.effects())
+		for (var effect : foodComponent.onConsumeEffects())
 		{
-			if (effect.effect().getEffectType().value().getCategory() == StatusEffectCategory.HARMFUL)
-				return true;
+			if (effect instanceof ApplyEffectsConsumeEffect effectsConsumeEffect) {
+				for (StatusEffectInstance effectInstance : effectsConsumeEffect.effects()) {
+					if (effectInstance.getEffectType().value().getCategory() == StatusEffectCategory.HARMFUL)
+						return true;
+				}
+			}
 		}
 		return false;
 	}
 
-	public static float getEstimatedHealthIncrement(PlayerEntity player, FoodComponent foodComponent)
+	public static float getEstimatedHealthIncrement(PlayerEntity player, FoodComponent foodComponent, ConsumableComponent consumableComponent)
 	{
 		if (!player.canFoodHeal())
 			return 0;
@@ -85,26 +95,31 @@ public class FoodHelper
 		float healthIncrement = 0;
 
 		// health for natural regen
-		if (foodLevel >= 18.0F && world != null && world.getGameRules().getBoolean(GameRules.NATURAL_REGENERATION))
+		if (foodLevel >= 18.0F && world instanceof ServerWorld serverWorld && serverWorld.getGameRules().getBoolean(GameRules.NATURAL_REGENERATION))
 		{
 			float saturationLevel = Math.min(stats.getSaturationLevel() + foodComponent.saturation(), (float) foodLevel);
-			float exhaustionLevel = stats.getExhaustion();
+			float exhaustionLevel = stats.exhaustion;
 			healthIncrement = getEstimatedHealthIncrement(foodLevel, saturationLevel, exhaustionLevel);
 		}
 
 		// health for regeneration effect
-		for (FoodComponent.StatusEffectEntry effect : foodComponent.effects())
-		{
-			StatusEffectInstance effectInstance = effect.effect();
-			if (effectInstance.getEffectType() == StatusEffects.REGENERATION)
-			{
-				int amplifier = effectInstance.getAmplifier();
-				int duration = effectInstance.getDuration();
 
-				// Refer: https://minecraft.fandom.com/wiki/Regeneration
-				// Refer: net.minecraft.entity.effect.StatusEffect.canApplyUpdateEffect
-				healthIncrement += (float) Math.floor(duration / Math.max(50 >> amplifier, 1));
-				break;
+		for (var effect : consumableComponent.onConsumeEffects())
+		{
+			if (effect instanceof ApplyEffectsConsumeEffect effectsConsumeEffect) {
+				for (StatusEffectInstance effectInstance : effectsConsumeEffect.effects()) {
+
+					if (effectInstance.getEffectType() == StatusEffects.REGENERATION)
+					{
+						int amplifier = effectInstance.getAmplifier();
+						int duration = effectInstance.getDuration();
+
+						// Refer: https://minecraft.fandom.com/wiki/Regeneration
+						// Refer: net.minecraft.entity.effect.StatusEffect.canApplyUpdateEffect
+						healthIncrement += (float) (duration / Math.max(50 >> amplifier, 1));
+						break;
+					}
+				}
 			}
 		}
 

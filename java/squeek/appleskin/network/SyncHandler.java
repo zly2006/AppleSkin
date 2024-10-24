@@ -35,7 +35,7 @@ public class SyncHandler
 			lastSaturationLevels.put(player.getUuid(), saturation);
 		}
 
-		float exhaustionLevel = player.getHungerManager().getExhaustion();
+		float exhaustionLevel = player.getHungerManager().exhaustion;
 		if (lastExhaustionLevel == null || Math.abs(lastExhaustionLevel - exhaustionLevel) >= 0.01f)
 		{
 			ServerPlayNetworking.send(player, new ExhaustionSyncPayload(exhaustionLevel));

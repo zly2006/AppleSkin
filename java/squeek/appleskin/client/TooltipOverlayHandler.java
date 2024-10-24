@@ -4,6 +4,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.component.type.ConsumableComponent;
 import net.minecraft.item.tooltip.TooltipData;
 import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.client.util.math.MatrixStack;
@@ -78,6 +80,7 @@ public class TooltipOverlayHandler
 	{
 		private FoodComponent defaultFood;
 		private FoodComponent modifiedFood;
+		private ConsumableComponent consumable;
 
 		private int biggestHunger;
 		private float biggestSaturationIncrement;
@@ -120,8 +123,7 @@ public class TooltipOverlayHandler
 		}
 
 		@Override
-		public int getHeight()
-		{
+		public int getHeight(TextRenderer textRenderer) {
 			// hunger + spacing + saturation + arbitrary spacing,
 			// for some reason 3 extra looks best
 			return 9 + 1 + 7 + 3;
@@ -144,8 +146,7 @@ public class TooltipOverlayHandler
 		}
 
 		@Override
-		public void drawItems(TextRenderer textRenderer, int x, int y, DrawContext context)
-		{
+		public void drawItems(TextRenderer textRenderer, int x, int y, int width, int height, DrawContext context) {
 			if (TooltipOverlayHandler.INSTANCE != null)
 				TooltipOverlayHandler.INSTANCE.onRenderTooltip(context, this, x, y, 0, textRenderer);
 		}
@@ -207,11 +208,11 @@ public class TooltipOverlayHandler
 		{
 			switch (this)
 			{
-				case NEGATIVE -> context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-				case EXTRA -> context.setShaderColor(0.06f, 0.32f, 0.02f, 1.0f);
-				case NORMAL -> context.setShaderColor(0.0f, 0.0f, 0.0f, 1.0f);
-				case PARTIAL -> context.setShaderColor(0.53f, 0.21f, 0.08f, 1.0f);
-				case MISSING -> context.setShaderColor(0.62f, 0.0f, 0.0f, 0.5f);
+				case NEGATIVE -> RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+				case EXTRA -> RenderSystem.setShaderColor(0.06f, 0.32f, 0.02f, 1.0f);
+				case NORMAL -> RenderSystem.setShaderColor(0.0f, 0.0f, 0.0f, 1.0f);
+				case PARTIAL -> RenderSystem.setShaderColor(0.53f, 0.21f, 0.08f, 1.0f);
+				case MISSING -> RenderSystem.setShaderColor(0.62f, 0.0f, 0.0f, 0.5f);
 			}
 		}
 
@@ -273,30 +274,30 @@ public class TooltipOverlayHandler
 		// Render from right to left so that the icons 'face' the right way
 		x += (foodOverlay.hungerBars - 1) * 9;
 
-		boolean isRotten = FoodHelper.isRotten(modifiedFood);
+		boolean isRotten = FoodHelper.isRotten(foodOverlay.consumable);
 
 		for (int i = 0; i < foodOverlay.hungerBars * 2; i += 2)
 		{
-			context.drawGuiTexture(TextureHelper.FOOD_EMPTY_TEXTURE, x, y, 9, 9);
+			context.drawGuiTexture(RenderLayer::getGuiTextured, TextureHelper.FOOD_EMPTY_TEXTURE, x, y, 9, 9);
 
 			FoodOutline outline = FoodOutline.get(modifiedFoodHunger, defaultFoodHunger, i);
 			if (outline != FoodOutline.NORMAL)
 			{
 				outline.setShaderColor(context);
-				context.drawGuiTexture(TextureHelper.HUNGER_OUTLINE_SPRITE, x, y, 9, 9);
+				context.drawGuiTexture(RenderLayer::getGuiTextured, TextureHelper.HUNGER_OUTLINE_SPRITE, x, y, 9, 9);
 			}
 
-			context.setShaderColor(1.0F, 1.0F, 1.0F, .25F);
+			RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, .25F);
 			boolean isDefaultHalf = defaultFoodHunger - 1 == i;
 			Identifier defaultFoodIcon = TextureHelper.getFoodTexture(isRotten, isDefaultHalf ? FoodType.HALF : FoodType.FULL);
-			context.drawGuiTexture(defaultFoodIcon, x, y, 9, 9);
-			context.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+			context.drawGuiTexture(RenderLayer::getGuiTextured, defaultFoodIcon, x, y, 9, 9);
+			RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 
 			if (modifiedFoodHunger > i)
 			{
 				boolean isModifiedHalf = modifiedFoodHunger - 1 == i;
 				Identifier modifiedFoodIcon = TextureHelper.getFoodTexture(isRotten, isModifiedHalf ? FoodType.HALF : FoodType.FULL);
-				context.drawGuiTexture(modifiedFoodIcon, x, y, 9, 9);
+				context.drawGuiTexture(RenderLayer::getGuiTextured, modifiedFoodIcon, x, y, 9, 9);
 			}
 
 			x -= 9;
@@ -329,7 +330,7 @@ public class TooltipOverlayHandler
 			if (shouldBeFaded)
 				RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, .5F);
 
-			context.drawTexture(TextureHelper.MOD_ICONS, x, y, tooltipZ, effectiveSaturationOfBar >= 1 ? 21 : effectiveSaturationOfBar > 0.5 ? 14 : effectiveSaturationOfBar > 0.25 ? 7 : effectiveSaturationOfBar > 0 ? 0 : 28, modifiedSaturationIncrement >= 0 ? 27 : 34, 7, 7, 256, 256);
+			context.drawTexture(RenderLayer::getGuiTextured, TextureHelper.MOD_ICONS, x, y, tooltipZ, effectiveSaturationOfBar >= 1 ? 21 : effectiveSaturationOfBar > 0.5 ? 14 : effectiveSaturationOfBar > 0.25 ? 7 : effectiveSaturationOfBar > 0 ? 0 : 28, modifiedSaturationIncrement >= 0 ? 27 : 34, 7, 7, 256, 256);
 
 			if (shouldBeFaded)
 				RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);

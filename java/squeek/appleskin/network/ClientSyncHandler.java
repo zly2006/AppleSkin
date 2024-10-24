@@ -11,7 +11,7 @@ public class ClientSyncHandler
 	{
 		ClientPlayNetworking.registerGlobalReceiver(ExhaustionSyncPayload.ID, (payload, context) -> {
 			context.client().execute(() -> {
-				context.client().player.getHungerManager().setExhaustion(payload.getExhaustion());
+				context.client().player.getHungerManager().exhaustion = (payload.getExhaustion());
 			});
 		});
 		ClientPlayNetworking.registerGlobalReceiver(SaturationSyncPayload.ID, (payload, context) -> {
